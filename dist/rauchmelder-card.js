@@ -3,7 +3,7 @@
  * Kompakt, individuell konfigurierbare Icons, Farben und Texte.
  */
 
-const CARD_VERSION = "1.4.0";
+const CARD_VERSION = "1.5.0";
 
 console.info(
   `%c RAUCHMELDER-CARD %c v${CARD_VERSION} `,
@@ -39,6 +39,9 @@ const ICON_OPTIONS = [
   { value: "mdi:bell-off", label: "Glocke Aus" },
   { value: "mdi:power", label: "Power" },
   { value: "mdi:power-off", label: "Power Aus" },
+  { value: "mdi:lock", label: "Schloss" },
+  { value: "mdi:lock-open", label: "Schloss offen" },
+  { value: "mdi:lock-off", label: "Schloss Aus" },
   { value: "mdi:close-circle", label: "X Kreis" },
   { value: "mdi:cancel", label: "Abbrechen" },
   { value: "mdi:eye", label: "Auge" },
@@ -107,9 +110,11 @@ class RauchmelderCard extends HTMLElement {
     return this._hass.states[entityId];
   }
 
-  _isOn(entityId) {
+  _isActive(entityId) {
     const state = this._getState(entityId);
-    return state ? state.state === "on" : false;
+    if (!state) return false;
+    const s = state.state;
+    return s === "on" || s === "locked";
   }
 
   _isDemo() {
@@ -120,9 +125,32 @@ class RauchmelderCard extends HTMLElement {
     );
   }
 
-  _toggleEntity(entityId) {
+  _toggleLock(entityId) {
     if (!this._hass || !entityId) return;
-    this._hass.callService("switch", "toggle", { entity_id: entityId });
+    const state = this._getState(entityId);
+    if (!state) return;
+    const domain = entityId.split(".")[0];
+    if (domain === "lock") {
+      const service = state.state === "locked" ? "unlock" : "lock";
+      this._hass.callService("lock", service, { entity_id: entityId });
+    } else if (domain === "switch") {
+      this._hass.callService("switch", "toggle", { entity_id: entityId });
+    } else {
+      this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
+    }
+  }
+
+  _lastChanged(entityId) {
+    const state = this._getState(entityId);
+    if (!state) return "";
+    const d = new Date(state.last_changed);
+    return d.toLocaleString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
   _hexToRgba(hex, alpha) {
@@ -137,9 +165,9 @@ class RauchmelderCard extends HTMLElement {
 
     const c = this._config;
     const demo = this._isDemo();
-    const abschaltungOn = demo ? false : this._isOn(c.entity_abschaltung);
-    const fehlerOn = demo ? false : this._isOn(c.entity_fehler);
-    const abschaltenOn = demo ? false : this._isOn(c.entity_abschalten);
+    const abschaltungOn = demo ? false : this._isActive(c.entity_abschaltung);
+    const fehlerOn = demo ? false : this._isActive(c.entity_fehler);
+    const abschaltenOn = demo ? false : this._isActive(c.entity_abschalten);
 
     const hasAlerts = abschaltungOn || fehlerOn;
 
@@ -161,6 +189,7 @@ class RauchmelderCard extends HTMLElement {
     }
 
     const badgeText = demo ? "Vorschau" : fehlerOn ? c.text_fehler : abschaltungOn ? c.text_abschaltung : c.text_ok;
+    const lastChanged = !demo && c.entity_abschalten ? this._lastChanged(c.entity_abschalten) : "";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
@@ -200,14 +229,23 @@ class RauchmelderCard extends HTMLElement {
             --mdc-icon-size: 18px;
           }
 
+          .header .info {
+            flex: 1;
+            min-width: 0;
+          }
+
           .header .title {
             font-size: 14px;
             font-weight: 600;
             color: var(--text-primary);
-            flex: 1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+          }
+
+          .header .last-changed {
+            font-size: 10px;
+            color: var(--text-secondary);
           }
 
           .header .badge {
@@ -245,39 +283,7 @@ class RauchmelderCard extends HTMLElement {
           .toggle-row {
             display: flex;
             align-items: center;
-            justify-content: space-between;
             margin-top: 8px;
-            padding: 8px 10px;
-            border: 1px solid ${abschaltenOn ? c.color_fehler : "var(--divider-color, #e0e0e0)"};
-            border-radius: 8px;
-            background: ${abschaltenOn ? this._hexToRgba(c.color_fehler, 0.1) : "var(--card-background-color, var(--ha-card-background, transparent))"};
-            cursor: pointer;
-            transition: all 0.2s ease;
-          }
-
-          .toggle-row:hover {
-            border-color: ${abschaltenOn ? c.color_fehler : c.color_abschaltung};
-          }
-
-          .toggle-row:active {
-            transform: scale(0.98);
-          }
-
-          .toggle-left {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-          }
-
-          .toggle-left ha-icon {
-            --mdc-icon-size: 18px;
-            color: ${abschaltenOn ? c.color_fehler : "var(--text-secondary)"};
-          }
-
-          .toggle-label {
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-primary);
           }
 
           .toggle-switch {
@@ -287,7 +293,16 @@ class RauchmelderCard extends HTMLElement {
             background: ${abschaltenOn ? c.color_fehler : "#ccc"};
             position: relative;
             flex-shrink: 0;
+            cursor: pointer;
             transition: background 0.2s ease;
+          }
+
+          .toggle-switch:hover {
+            opacity: 0.85;
+          }
+
+          .toggle-switch:active {
+            transform: scale(0.95);
           }
 
           .toggle-switch::after {
@@ -317,18 +332,17 @@ class RauchmelderCard extends HTMLElement {
             <div class="icon">
               <ha-icon icon="${c.icon}"></ha-icon>
             </div>
-            <div class="title">${c.title}</div>
+            <div class="info">
+              <div class="title">${c.title}</div>
+              ${lastChanged ? '<div class="last-changed">' + lastChanged + '</div>' : ""}
+            </div>
             <div class="badge">${badgeText}</div>
           </div>
 
           ${hasAlerts ? '<div class="alerts">' + alerts.join("") + "</div>" : ""}
 
-          <div class="toggle-row" id="btn-toggle">
-            <div class="toggle-left">
-              <ha-icon icon="mdi:power"></ha-icon>
-              <div class="toggle-label">${abschaltenOn ? "Ist abgeschaltet" : "Abschalten"}</div>
-            </div>
-            <div class="toggle-switch"></div>
+          <div class="toggle-row">
+            <div class="toggle-switch" id="btn-toggle"></div>
           </div>
 
           ${demo ? '<div class="demo-hint">Entities im Editor konfigurieren</div>' : ""}
@@ -339,7 +353,7 @@ class RauchmelderCard extends HTMLElement {
     const btn = this.shadowRoot.getElementById("btn-toggle");
     if (btn && !demo) {
       btn.addEventListener("click", () => {
-        this._toggleEntity(c.entity_abschalten);
+        this._toggleLock(c.entity_abschalten);
       });
     }
   }
@@ -352,11 +366,14 @@ class RauchmelderCardEditor extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = {};
     this._hass = null;
+    this._rendered = false;
   }
 
   setConfig(config) {
     this._config = { ...config };
-    this._render();
+    if (!this._rendered) {
+      this._render();
+    }
   }
 
   set hass(hass) {
@@ -365,7 +382,7 @@ class RauchmelderCardEditor extends HTMLElement {
 
   _fireChanged() {
     this.dispatchEvent(
-      new CustomEvent("config-changed", { detail: { config: this._config } })
+      new CustomEvent("config-changed", { detail: { config: { ...this._config } } })
     );
   }
 
@@ -375,7 +392,16 @@ class RauchmelderCardEditor extends HTMLElement {
     ).join("");
   }
 
+  _updateIconPreview(key) {
+    const preview = this.shadowRoot.getElementById(key + "_preview");
+    if (preview) {
+      preview.innerHTML = '<ha-icon icon="' + (this._config[key] || "mdi:smoke-detector") + '"></ha-icon> Vorschau';
+    }
+  }
+
   _render() {
+    this._rendered = true;
+
     this.shadowRoot.innerHTML = `
       <style>
         .editor {
@@ -555,8 +581,8 @@ class RauchmelderCardEditor extends HTMLElement {
               <input type="text" id="entity_fehler" value="${this._config.entity_fehler || ""}" placeholder="binary_sensor..." />
             </div>
             <div class="field">
-              <span class="field-label">Abschalten</span>
-              <input type="text" id="entity_abschalten" value="${this._config.entity_abschalten || ""}" placeholder="switch..." />
+              <span class="field-label">Abschalten (lock / switch)</span>
+              <input type="text" id="entity_abschalten" value="${this._config.entity_abschalten || ""}" placeholder="lock... / switch..." />
             </div>
           </div>
         </div>
@@ -587,17 +613,17 @@ class RauchmelderCardEditor extends HTMLElement {
             <div class="field">
               <span class="field-label">Haupt-Icon</span>
               <select id="icon">${this._iconOptions(this._config.icon || "mdi:smoke-detector")}</select>
-              <div class="icon-preview"><ha-icon icon="${this._config.icon || "mdi:smoke-detector"}"></ha-icon> Vorschau</div>
+              <div class="icon-preview" id="icon_preview"><ha-icon icon="${this._config.icon || "mdi:smoke-detector"}"></ha-icon> Vorschau</div>
             </div>
             <div class="field">
               <span class="field-label">Fehler-Icon</span>
               <select id="icon_fehler">${this._iconOptions(this._config.icon_fehler || "mdi:smoke-detector-alert")}</select>
-              <div class="icon-preview"><ha-icon icon="${this._config.icon_fehler || "mdi:smoke-detector-alert"}"></ha-icon> Vorschau</div>
+              <div class="icon-preview" id="icon_fehler_preview"><ha-icon icon="${this._config.icon_fehler || "mdi:smoke-detector-alert"}"></ha-icon> Vorschau</div>
             </div>
             <div class="field">
               <span class="field-label">Abschaltung-Icon</span>
               <select id="icon_abschaltung">${this._iconOptions(this._config.icon_abschaltung || "mdi:smoke-detector-off")}</select>
-              <div class="icon-preview"><ha-icon icon="${this._config.icon_abschaltung || "mdi:smoke-detector-off"}"></ha-icon> Vorschau</div>
+              <div class="icon-preview" id="icon_abschaltung_preview"><ha-icon icon="${this._config.icon_abschaltung || "mdi:smoke-detector-off"}"></ha-icon> Vorschau</div>
             </div>
           </div>
         </div>
@@ -640,9 +666,12 @@ class RauchmelderCardEditor extends HTMLElement {
     textFields.forEach((key) => {
       const input = this.shadowRoot.getElementById(key);
       if (input) {
-        input.addEventListener("input", (e) => {
+        input.addEventListener("change", (e) => {
           this._config = { ...this._config, [key]: e.target.value };
           this._fireChanged();
+        });
+        input.addEventListener("input", (e) => {
+          this._config[key] = e.target.value;
         });
       }
     });
@@ -653,7 +682,7 @@ class RauchmelderCardEditor extends HTMLElement {
         select.addEventListener("change", (e) => {
           this._config = { ...this._config, [key]: e.target.value };
           this._fireChanged();
-          this._render();
+          this._updateIconPreview(key);
         });
       }
     });
@@ -670,12 +699,18 @@ class RauchmelderCardEditor extends HTMLElement {
         });
       }
       if (text) {
-        text.addEventListener("input", (e) => {
+        text.addEventListener("change", (e) => {
           this._config = { ...this._config, [key]: e.target.value };
           if (picker && e.target.value.match(/^#[0-9a-fA-F]{6}$/)) {
             picker.value = e.target.value;
           }
           this._fireChanged();
+        });
+        text.addEventListener("input", (e) => {
+          this._config[key] = e.target.value;
+          if (picker && e.target.value.match(/^#[0-9a-fA-F]{6}$/)) {
+            picker.value = e.target.value;
+          }
         });
       }
     });
