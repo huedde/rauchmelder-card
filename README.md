@@ -17,7 +17,7 @@ Custom Lovelace Card für Home Assistant zur Anzeige und Steuerung von Rauchmeld
 
 1. **HACS** öffnen → **Frontend** → **⋮** (drei Punkte oben rechts)
 2. **Benutzerdefinierte Repositories** auswählen
-3. Repository-URL eingeben: `https://github.com/DEIN_USERNAME/rauchmelder-card`
+3. Repository-URL eingeben: `https://github.com/huedde/rauchmelder-card`
 4. Kategorie: **Lovelace**
 5. **Hinzufügen** und anschließend **Installieren**
 6. Home Assistant **neu starten**
