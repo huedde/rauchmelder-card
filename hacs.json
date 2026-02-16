@@ -1,0 +1,6 @@
+{
+  "name": "Rauchmelder Card",
+  "render_readme": true,
+  "filename": "dist/rauchmelder-card.js",
+  "content_in_root": false
+}

@@ -1,0 +1,18 @@
+{
+  "name": "rauchmelder-card",
+  "version": "1.0.0",
+  "description": "Home Assistant Lovelace Card für Rauchmelder – Abschaltung, Fehler, Steuerung (1-Bit KNX Objekte)",
+  "author": "h.oezel",
+  "license": "MIT",
+  "repository": {
+    "type": "git"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "hacs",
+    "rauchmelder",
+    "smoke-detector",
+    "knx"
+  ]
+}
