@@ -1,15 +1,49 @@
 /**
  * Rauchmelder Card – Home Assistant Custom Lovelace Card
- * Kompakt, individuell konfigurierbare Icons und Farben.
+ * Kompakt, individuell konfigurierbare Icons, Farben und Texte.
  */
 
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.4.0";
 
 console.info(
   `%c RAUCHMELDER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #e74c3c; font-weight: bold; padding: 2px 6px; border-radius: 4px 0 0 4px;",
   "color: #e74c3c; background: #ffeaea; font-weight: bold; padding: 2px 6px; border-radius: 0 4px 4px 0;"
 );
+
+const ICON_OPTIONS = [
+  { value: "mdi:smoke-detector", label: "Rauchmelder" },
+  { value: "mdi:smoke-detector-alert", label: "Rauchmelder Alarm" },
+  { value: "mdi:smoke-detector-off", label: "Rauchmelder Aus" },
+  { value: "mdi:smoke-detector-off-outline", label: "Rauchmelder Aus (Outline)" },
+  { value: "mdi:smoke-detector-outline", label: "Rauchmelder (Outline)" },
+  { value: "mdi:smoke-detector-variant", label: "Rauchmelder Variante" },
+  { value: "mdi:smoke-detector-variant-alert", label: "Rauchmelder Variante Alarm" },
+  { value: "mdi:smoke-detector-variant-off", label: "Rauchmelder Variante Aus" },
+  { value: "mdi:fire", label: "Feuer" },
+  { value: "mdi:fire-alert", label: "Feuer Alarm" },
+  { value: "mdi:fire-off", label: "Feuer Aus" },
+  { value: "mdi:alarm-light", label: "Alarmleuchte" },
+  { value: "mdi:alarm-light-off", label: "Alarmleuchte Aus" },
+  { value: "mdi:alarm-light-outline", label: "Alarmleuchte (Outline)" },
+  { value: "mdi:alert", label: "Warnung" },
+  { value: "mdi:alert-circle", label: "Warnung Kreis" },
+  { value: "mdi:alert-outline", label: "Warnung (Outline)" },
+  { value: "mdi:check-circle", label: "OK Kreis" },
+  { value: "mdi:check-circle-outline", label: "OK Kreis (Outline)" },
+  { value: "mdi:shield-check", label: "Schild OK" },
+  { value: "mdi:shield-alert", label: "Schild Alarm" },
+  { value: "mdi:shield-off", label: "Schild Aus" },
+  { value: "mdi:bell", label: "Glocke" },
+  { value: "mdi:bell-alert", label: "Glocke Alarm" },
+  { value: "mdi:bell-off", label: "Glocke Aus" },
+  { value: "mdi:power", label: "Power" },
+  { value: "mdi:power-off", label: "Power Aus" },
+  { value: "mdi:close-circle", label: "X Kreis" },
+  { value: "mdi:cancel", label: "Abbrechen" },
+  { value: "mdi:eye", label: "Auge" },
+  { value: "mdi:eye-off", label: "Auge Aus" },
+];
 
 class RauchmelderCard extends HTMLElement {
   constructor() {
@@ -48,6 +82,9 @@ class RauchmelderCard extends HTMLElement {
       color_ok: config.color_ok || "#27ae60",
       color_fehler: config.color_fehler || "#e74c3c",
       color_abschaltung: config.color_abschaltung || "#f39c12",
+      text_fehler: config.text_fehler || "Fehler aktiv",
+      text_abschaltung: config.text_abschaltung || "Abgeschaltet",
+      text_ok: config.text_ok || "OK",
     };
     this._render();
   }
@@ -113,15 +150,17 @@ class RauchmelderCard extends HTMLElement {
     if (fehlerOn) {
       alerts.push(
         '<div class="alert" style="background:' + this._hexToRgba(c.color_fehler, 0.15) + ";color:" + c.color_fehler + '">' +
-        '<ha-icon icon="' + c.icon_fehler + '"></ha-icon> Fehler aktiv</div>'
+        '<ha-icon icon="' + c.icon_fehler + '"></ha-icon> ' + c.text_fehler + '</div>'
       );
     }
     if (abschaltungOn) {
       alerts.push(
         '<div class="alert" style="background:' + this._hexToRgba(c.color_abschaltung, 0.15) + ";color:" + c.color_abschaltung + '">' +
-        '<ha-icon icon="' + c.icon_abschaltung + '"></ha-icon> Abgeschaltet</div>'
+        '<ha-icon icon="' + c.icon_abschaltung + '"></ha-icon> ' + c.text_abschaltung + '</div>'
       );
     }
+
+    const badgeText = demo ? "Vorschau" : fehlerOn ? c.text_fehler : abschaltungOn ? c.text_abschaltung : c.text_ok;
 
     this.shadowRoot.innerHTML = `
       <ha-card>
@@ -279,9 +318,7 @@ class RauchmelderCard extends HTMLElement {
               <ha-icon icon="${c.icon}"></ha-icon>
             </div>
             <div class="title">${c.title}</div>
-            <div class="badge">${
-              demo ? "Vorschau" : fehlerOn ? "Fehler" : abschaltungOn ? "Aus" : "OK"
-            }</div>
+            <div class="badge">${badgeText}</div>
           </div>
 
           ${hasAlerts ? '<div class="alerts">' + alerts.join("") + "</div>" : ""}
@@ -332,6 +369,12 @@ class RauchmelderCardEditor extends HTMLElement {
     );
   }
 
+  _iconOptions(selected) {
+    return ICON_OPTIONS.map(
+      (o) => '<option value="' + o.value + '"' + (o.value === selected ? " selected" : "") + ">" + o.label + " (" + o.value + ")</option>"
+    ).join("");
+  }
+
   _render() {
     this.shadowRoot.innerHTML = `
       <style>
@@ -370,6 +413,12 @@ class RauchmelderCardEditor extends HTMLElement {
           gap: 12px;
         }
 
+        .grid-3 {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 12px;
+        }
+
         .field {
           display: flex;
           flex-direction: column;
@@ -381,7 +430,8 @@ class RauchmelderCardEditor extends HTMLElement {
           color: var(--secondary-text-color, #aaa);
         }
 
-        .field input[type="text"] {
+        .field input[type="text"],
+        .field select {
           width: 100%;
           padding: 10px 12px;
           border: 1px solid var(--divider-color, #3a3a3a);
@@ -392,15 +442,40 @@ class RauchmelderCardEditor extends HTMLElement {
           box-sizing: border-box;
           outline: none;
           transition: border-color 0.2s;
+          -webkit-appearance: none;
+          appearance: none;
         }
 
-        .field input[type="text"]:focus {
+        .field select {
+          cursor: pointer;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23aaa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 12px center;
+          padding-right: 32px;
+        }
+
+        .field input[type="text"]:focus,
+        .field select:focus {
           border-color: var(--primary-color, #03a9f4);
         }
 
         .field input[type="text"]::placeholder {
           color: var(--secondary-text-color, #666);
           font-size: 12px;
+        }
+
+        .icon-preview {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 4px;
+          font-size: 11px;
+          color: var(--secondary-text-color, #aaa);
+        }
+
+        .icon-preview ha-icon {
+          --mdc-icon-size: 20px;
+          color: var(--primary-text-color, #fff);
         }
 
         .color-field {
@@ -414,18 +489,43 @@ class RauchmelderCardEditor extends HTMLElement {
           color: var(--secondary-text-color, #aaa);
         }
 
-        .color-field input[type="color"] {
-          width: 60px;
-          height: 32px;
+        .color-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .color-row input[type="color"] {
+          width: 40px;
+          height: 34px;
           border: 2px solid var(--divider-color, #3a3a3a);
           border-radius: 8px;
           cursor: pointer;
           padding: 2px;
           background: transparent;
+          flex-shrink: 0;
           transition: border-color 0.2s;
         }
 
-        .color-field input[type="color"]:hover {
+        .color-row input[type="color"]:hover {
+          border-color: var(--primary-color, #03a9f4);
+        }
+
+        .color-row input[type="text"] {
+          flex: 1;
+          padding: 8px 10px;
+          border: 1px solid var(--divider-color, #3a3a3a);
+          border-radius: 8px;
+          font-size: 12px;
+          font-family: monospace;
+          background: var(--input-fill-color, var(--secondary-background-color, #2a2a2a));
+          color: var(--primary-text-color, #fff);
+          box-sizing: border-box;
+          outline: none;
+          min-width: 0;
+        }
+
+        .color-row input[type="text"]:focus {
           border-color: var(--primary-color, #03a9f4);
         }
       </style>
@@ -461,21 +561,43 @@ class RauchmelderCardEditor extends HTMLElement {
           </div>
         </div>
 
+        <!-- TEXTE -->
+        <div class="section">
+          <div class="section-title">Texte</div>
+          <div class="grid-3">
+            <div class="field">
+              <span class="field-label">OK-Text</span>
+              <input type="text" id="text_ok" value="${this._config.text_ok || "OK"}" placeholder="OK" />
+            </div>
+            <div class="field">
+              <span class="field-label">Fehler-Text</span>
+              <input type="text" id="text_fehler" value="${this._config.text_fehler || "Fehler aktiv"}" placeholder="Fehler aktiv" />
+            </div>
+            <div class="field">
+              <span class="field-label">Abschaltung-Text</span>
+              <input type="text" id="text_abschaltung" value="${this._config.text_abschaltung || "Abgeschaltet"}" placeholder="Abgeschaltet" />
+            </div>
+          </div>
+        </div>
+
         <!-- ICONS -->
         <div class="section">
           <div class="section-title">Icons</div>
           <div class="grid-2">
             <div class="field">
               <span class="field-label">Haupt-Icon</span>
-              <input type="text" id="icon" value="${this._config.icon || "mdi:smoke-detector"}" placeholder="mdi:smoke-detector" />
+              <select id="icon">${this._iconOptions(this._config.icon || "mdi:smoke-detector")}</select>
+              <div class="icon-preview"><ha-icon icon="${this._config.icon || "mdi:smoke-detector"}"></ha-icon> Vorschau</div>
             </div>
             <div class="field">
               <span class="field-label">Fehler-Icon</span>
-              <input type="text" id="icon_fehler" value="${this._config.icon_fehler || "mdi:smoke-detector-alert"}" placeholder="mdi:smoke-detector-alert" />
+              <select id="icon_fehler">${this._iconOptions(this._config.icon_fehler || "mdi:smoke-detector-alert")}</select>
+              <div class="icon-preview"><ha-icon icon="${this._config.icon_fehler || "mdi:smoke-detector-alert"}"></ha-icon> Vorschau</div>
             </div>
             <div class="field">
               <span class="field-label">Abschaltung-Icon</span>
-              <input type="text" id="icon_abschaltung" value="${this._config.icon_abschaltung || "mdi:smoke-detector-off"}" placeholder="mdi:smoke-detector-off" />
+              <select id="icon_abschaltung">${this._iconOptions(this._config.icon_abschaltung || "mdi:smoke-detector-off")}</select>
+              <div class="icon-preview"><ha-icon icon="${this._config.icon_abschaltung || "mdi:smoke-detector-off"}"></ha-icon> Vorschau</div>
             </div>
           </div>
         </div>
@@ -483,18 +605,27 @@ class RauchmelderCardEditor extends HTMLElement {
         <!-- FARBEN -->
         <div class="section">
           <div class="section-title">Farben (optional)</div>
-          <div class="grid-2">
+          <div class="grid-3">
             <div class="color-field">
               <span class="color-label">OK</span>
-              <input type="color" id="color_ok_picker" value="${this._config.color_ok || "#27ae60"}" />
+              <div class="color-row">
+                <input type="color" id="color_ok_picker" value="${this._config.color_ok || "#27ae60"}" />
+                <input type="text" id="color_ok" value="${this._config.color_ok || "#27ae60"}" />
+              </div>
             </div>
             <div class="color-field">
               <span class="color-label">Fehler</span>
-              <input type="color" id="color_fehler_picker" value="${this._config.color_fehler || "#e74c3c"}" />
+              <div class="color-row">
+                <input type="color" id="color_fehler_picker" value="${this._config.color_fehler || "#e74c3c"}" />
+                <input type="text" id="color_fehler" value="${this._config.color_fehler || "#e74c3c"}" />
+              </div>
             </div>
             <div class="color-field">
               <span class="color-label">Abschaltung</span>
-              <input type="color" id="color_abschaltung_picker" value="${this._config.color_abschaltung || "#f39c12"}" />
+              <div class="color-row">
+                <input type="color" id="color_abschaltung_picker" value="${this._config.color_abschaltung || "#f39c12"}" />
+                <input type="text" id="color_abschaltung" value="${this._config.color_abschaltung || "#f39c12"}" />
+              </div>
             </div>
           </div>
         </div>
@@ -503,7 +634,7 @@ class RauchmelderCardEditor extends HTMLElement {
 
     const textFields = [
       "title", "entity_abschaltung", "entity_fehler", "entity_abschalten",
-      "icon", "icon_fehler", "icon_abschaltung"
+      "text_ok", "text_fehler", "text_abschaltung"
     ];
 
     textFields.forEach((key) => {
@@ -516,11 +647,34 @@ class RauchmelderCardEditor extends HTMLElement {
       }
     });
 
+    ["icon", "icon_fehler", "icon_abschaltung"].forEach((key) => {
+      const select = this.shadowRoot.getElementById(key);
+      if (select) {
+        select.addEventListener("change", (e) => {
+          this._config = { ...this._config, [key]: e.target.value };
+          this._fireChanged();
+          this._render();
+        });
+      }
+    });
+
     ["color_ok", "color_fehler", "color_abschaltung"].forEach((key) => {
       const picker = this.shadowRoot.getElementById(key + "_picker");
+      const text = this.shadowRoot.getElementById(key);
+
       if (picker) {
         picker.addEventListener("input", (e) => {
           this._config = { ...this._config, [key]: e.target.value };
+          if (text) text.value = e.target.value;
+          this._fireChanged();
+        });
+      }
+      if (text) {
+        text.addEventListener("input", (e) => {
+          this._config = { ...this._config, [key]: e.target.value };
+          if (picker && e.target.value.match(/^#[0-9a-fA-F]{6}$/)) {
+            picker.value = e.target.value;
+          }
           this._fireChanged();
         });
       }
@@ -536,6 +690,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "rauchmelder-card",
   name: "Rauchmelder Card",
-  description: "Kompakte Rauchmelder-Karte mit individuellen Icons und Farben (1-Bit KNX).",
+  description: "Kompakte Rauchmelder-Karte mit individuellen Icons, Farben und Texten (1-Bit KNX).",
   preview: true,
 });
