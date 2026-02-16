@@ -4,7 +4,7 @@
  * für 1-Bit KNX-Objekte.
  */
 
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 
 console.info(
   `%c RAUCHMELDER-CARD %c v${CARD_VERSION} `,
@@ -20,7 +20,6 @@ class RauchmelderCard extends HTMLElement {
     this._hass = null;
   }
 
-  /* ── Editor für den visuellen Karteneditor ─────────────── */
   static getConfigElement() {
     return document.createElement("rauchmelder-card-editor");
   }
@@ -34,11 +33,7 @@ class RauchmelderCard extends HTMLElement {
     };
   }
 
-  /* ── Konfiguration setzen ─────────────────────────────── */
   setConfig(config) {
-    if (!config.entity_abschalten) {
-      throw new Error("Bitte 'entity_abschalten' angeben (switch entity).");
-    }
     this._config = {
       title: config.title || "Rauchmelder",
       entity_abschaltung: config.entity_abschaltung || "",
@@ -49,18 +44,15 @@ class RauchmelderCard extends HTMLElement {
     this._render();
   }
 
-  /* ── Home Assistant State ─────────────────────────────── */
   set hass(hass) {
     this._hass = hass;
     this._render();
   }
 
-  /* ── Kartengröße ──────────────────────────────────────── */
   getCardSize() {
     return 3;
   }
 
-  /* ── Hilfsfunktionen ──────────────────────────────────── */
   _getState(entityId) {
     if (!this._hass || !entityId || !this._hass.states[entityId]) return null;
     return this._hass.states[entityId];
@@ -69,6 +61,14 @@ class RauchmelderCard extends HTMLElement {
   _isOn(entityId) {
     const state = this._getState(entityId);
     return state ? state.state === "on" : false;
+  }
+
+  _isDemo() {
+    return (
+      !this._config.entity_abschaltung &&
+      !this._config.entity_fehler &&
+      !this._config.entity_abschalten
+    );
   }
 
   _lastChanged(entityId) {
@@ -91,16 +91,20 @@ class RauchmelderCard extends HTMLElement {
     });
   }
 
-  /* ── Rendering ────────────────────────────────────────── */
   _render() {
     if (!this.shadowRoot || !this._config) return;
 
-    const abschaltungOn = this._isOn(this._config.entity_abschaltung);
-    const fehlerOn = this._isOn(this._config.entity_fehler);
-    const abschaltenOn = this._isOn(this._config.entity_abschalten);
+    const demo = this._isDemo();
 
-    const abschaltungEntity = this._getState(this._config.entity_abschaltung);
-    const fehlerEntity = this._getState(this._config.entity_fehler);
+    const abschaltungOn = demo ? false : this._isOn(this._config.entity_abschaltung);
+    const fehlerOn = demo ? false : this._isOn(this._config.entity_fehler);
+    const abschaltenOn = demo ? false : this._isOn(this._config.entity_abschalten);
+
+    const abschaltungEntity = demo ? true : this._getState(this._config.entity_abschaltung);
+    const fehlerEntity = demo ? true : this._getState(this._config.entity_fehler);
+
+    const headerBg = fehlerOn ? "#fde8e8" : abschaltungOn ? "#fef3e2" : "#e8f5e9";
+    const headerColor = fehlerOn ? "#e74c3c" : abschaltungOn ? "#f39c12" : "#27ae60";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
@@ -109,6 +113,17 @@ class RauchmelderCard extends HTMLElement {
             --card-bg: var(--ha-card-background, var(--card-background-color, #fff));
             --text-primary: var(--primary-text-color, #333);
             --text-secondary: var(--secondary-text-color, #777);
+          }
+
+          .demo-banner {
+            background: #3b4cca;
+            color: white;
+            text-align: center;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            border-radius: var(--ha-card-border-radius, 12px) var(--ha-card-border-radius, 12px) 0 0;
           }
 
           .card-header {
@@ -125,8 +140,8 @@ class RauchmelderCard extends HTMLElement {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: ${fehlerOn ? "#fde8e8" : abschaltungOn ? "#fef3e2" : "#e8f5e9"};
-            color: ${fehlerOn ? "#e74c3c" : abschaltungOn ? "#f39c12" : "#27ae60"};
+            background: ${headerBg};
+            color: ${headerColor};
             flex-shrink: 0;
           }
 
@@ -283,15 +298,9 @@ class RauchmelderCard extends HTMLElement {
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
             transition: left 0.3s ease;
           }
-
-          .unavailable {
-            color: var(--text-secondary);
-            font-style: italic;
-            text-align: center;
-            padding: 8px;
-            font-size: 12px;
-          }
         </style>
+
+        ${demo ? '<div class="demo-banner">VORSCHAU — Bitte Entities im Editor konfigurieren</div>' : ""}
 
         <div class="card-header">
           <div class="icon">
@@ -300,65 +309,51 @@ class RauchmelderCard extends HTMLElement {
           <div class="info">
             <div class="title">${this._config.title}</div>
             <div class="subtitle">
-              ${fehlerOn ? "⚠ Fehler aktiv!" : abschaltungOn ? "Abgeschaltet" : "Betriebsbereit"}
+              ${demo
+                ? "Beispielansicht"
+                : fehlerOn
+                  ? "Fehler aktiv!"
+                  : abschaltungOn
+                    ? "Abgeschaltet"
+                    : "Betriebsbereit"
+              }
             </div>
           </div>
         </div>
 
         <div class="status-grid">
-          <!-- Abschaltung -->
           <div class="status-item ${
-            !abschaltungEntity ? "" : abschaltungOn ? "warning" : "ok"
+            demo ? "ok" : !abschaltungEntity ? "" : abschaltungOn ? "warning" : "ok"
           }">
             <div class="status-icon">
               <ha-icon icon="${abschaltungOn ? "mdi:smoke-detector-off" : "mdi:smoke-detector"}"></ha-icon>
             </div>
             <div class="status-label">Abschaltung</div>
             <div class="status-value">
-              ${!abschaltungEntity 
-                ? "<em>Nicht konfiguriert</em>" 
-                : abschaltungOn 
-                  ? "Abgeschaltet" 
-                  : "Aktiv"
-              }
+              ${demo ? "Aktiv" : !abschaltungEntity ? "<em>Entity nicht gefunden</em>" : abschaltungOn ? "Abgeschaltet" : "Aktiv"}
             </div>
-            ${this._config.show_last_changed && abschaltungEntity 
-              ? `<div class="status-value" style="margin-top:4px;font-size:10px;">${this._lastChanged(this._config.entity_abschaltung)}</div>` 
-              : ""
-            }
           </div>
 
-          <!-- Fehler -->
           <div class="status-item ${
-            !fehlerEntity ? "" : fehlerOn ? "error" : "ok"
+            demo ? "ok" : !fehlerEntity ? "" : fehlerOn ? "error" : "ok"
           }">
             <div class="status-icon">
               <ha-icon icon="${fehlerOn ? "mdi:smoke-detector-alert" : "mdi:check-circle"}"></ha-icon>
             </div>
             <div class="status-label">Fehler</div>
             <div class="status-value">
-              ${!fehlerEntity 
-                ? "<em>Nicht konfiguriert</em>" 
-                : fehlerOn 
-                  ? "Fehler!" 
-                  : "Kein Fehler"
-              }
+              ${demo ? "Kein Fehler" : !fehlerEntity ? "<em>Entity nicht gefunden</em>" : fehlerOn ? "Fehler!" : "Kein Fehler"}
             </div>
-            ${this._config.show_last_changed && fehlerEntity 
-              ? `<div class="status-value" style="margin-top:4px;font-size:10px;">${this._lastChanged(this._config.entity_fehler)}</div>` 
-              : ""
-            }
           </div>
         </div>
 
-        <!-- Steuerung -->
         <div class="control-section">
           <div class="control-button" id="btn-toggle">
             <div class="control-left">
               <ha-icon icon="mdi:power"></ha-icon>
               <div>
                 <div class="control-label">Rauchmelder abschalten</div>
-                <div class="control-state">${abschaltenOn ? "Ist abgeschaltet" : "Ist eingeschaltet"}</div>
+                <div class="control-state">${demo ? "Ist eingeschaltet" : abschaltenOn ? "Ist abgeschaltet" : "Ist eingeschaltet"}</div>
               </div>
             </div>
             <div class="toggle-indicator"></div>
@@ -368,7 +363,7 @@ class RauchmelderCard extends HTMLElement {
     `;
 
     const btn = this.shadowRoot.getElementById("btn-toggle");
-    if (btn) {
+    if (btn && !demo) {
       btn.addEventListener("click", () => {
         this._toggleEntity(this._config.entity_abschalten);
       });
@@ -422,8 +417,19 @@ class RauchmelderCardEditor extends HTMLElement {
           color: var(--secondary-text-color);
           font-size: 11px;
         }
+        .editor .hint {
+          background: var(--info-color, #3b4cca);
+          color: white;
+          padding: 10px 14px;
+          border-radius: 8px;
+          font-size: 12px;
+          line-height: 1.5;
+        }
       </style>
       <div class="editor">
+        <div class="hint">
+          Alle Felder sind optional. Ohne Entities wird eine Vorschau angezeigt.
+        </div>
         <label>
           Titel
           <input id="title" value="${this._config.title || "Rauchmelder"}" />
@@ -439,9 +445,9 @@ class RauchmelderCardEditor extends HTMLElement {
           <small>1-Bit Status: Zeigt ob ein Fehler vorliegt</small>
         </label>
         <label>
-          Abschalten Entity (switch) *
+          Abschalten Entity (switch)
           <input id="entity_abschalten" value="${this._config.entity_abschalten || ""}" placeholder="switch.rauchmelder_abschalten" />
-          <small>1-Bit Steuerung: Schaltet den Melder ab (Pflichtfeld)</small>
+          <small>1-Bit Steuerung: Schaltet den Melder ab</small>
         </label>
       </div>
     `;
