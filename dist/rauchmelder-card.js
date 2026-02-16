@@ -1,10 +1,9 @@
 /**
  * Rauchmelder Card – Home Assistant Custom Lovelace Card
- * Zeigt Abschaltung-Status, Fehler-Status und Abschalten-Steuerung
- * für 1-Bit KNX-Objekte.
+ * Kompakte Karte: Abschaltung/Fehler nur als Text wenn aktiv.
  */
 
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.2.0";
 
 console.info(
   `%c RAUCHMELDER-CARD %c v${CARD_VERSION} `,
@@ -39,7 +38,6 @@ class RauchmelderCard extends HTMLElement {
       entity_abschaltung: config.entity_abschaltung || "",
       entity_fehler: config.entity_fehler || "",
       entity_abschalten: config.entity_abschalten || "",
-      show_last_changed: config.show_last_changed !== false,
     };
     this._render();
   }
@@ -50,7 +48,7 @@ class RauchmelderCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 3;
+    return 2;
   }
 
   _getState(entityId) {
@@ -71,19 +69,6 @@ class RauchmelderCard extends HTMLElement {
     );
   }
 
-  _lastChanged(entityId) {
-    const state = this._getState(entityId);
-    if (!state) return "";
-    const d = new Date(state.last_changed);
-    return d.toLocaleString("de-DE", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
   _toggleEntity(entityId) {
     if (!this._hass || !entityId) return;
     this._hass.callService("switch", "toggle", {
@@ -95,269 +80,202 @@ class RauchmelderCard extends HTMLElement {
     if (!this.shadowRoot || !this._config) return;
 
     const demo = this._isDemo();
-
     const abschaltungOn = demo ? false : this._isOn(this._config.entity_abschaltung);
     const fehlerOn = demo ? false : this._isOn(this._config.entity_fehler);
     const abschaltenOn = demo ? false : this._isOn(this._config.entity_abschalten);
 
-    const abschaltungEntity = demo ? true : this._getState(this._config.entity_abschaltung);
-    const fehlerEntity = demo ? true : this._getState(this._config.entity_fehler);
+    const hasAlerts = abschaltungOn || fehlerOn;
 
-    const headerBg = fehlerOn ? "#fde8e8" : abschaltungOn ? "#fef3e2" : "#e8f5e9";
-    const headerColor = fehlerOn ? "#e74c3c" : abschaltungOn ? "#f39c12" : "#27ae60";
+    const alerts = [];
+    if (fehlerOn) {
+      alerts.push('<div class="alert error"><ha-icon icon="mdi:smoke-detector-alert"></ha-icon> Fehler aktiv</div>');
+    }
+    if (abschaltungOn) {
+      alerts.push('<div class="alert warning"><ha-icon icon="mdi:smoke-detector-off"></ha-icon> Abgeschaltet</div>');
+    }
+
+    const statusColor = fehlerOn ? "#e74c3c" : abschaltungOn ? "#f39c12" : "#27ae60";
+    const statusBg = fehlerOn ? "#fde8e8" : abschaltungOn ? "#fef3e2" : "#e8f5e9";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
         <style>
           :host {
-            --card-bg: var(--ha-card-background, var(--card-background-color, #fff));
             --text-primary: var(--primary-text-color, #333);
             --text-secondary: var(--secondary-text-color, #777);
           }
 
-          .demo-banner {
-            background: #3b4cca;
-            color: white;
-            text-align: center;
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            border-radius: var(--ha-card-border-radius, 12px) var(--ha-card-border-radius, 12px) 0 0;
+          .card {
+            padding: 12px 16px;
           }
 
-          .card-header {
+          .header {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 16px 16px 8px 16px;
+            gap: 10px;
           }
 
-          .card-header .icon {
-            width: 40px;
-            height: 40px;
+          .header .icon {
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: ${headerBg};
-            color: ${headerColor};
+            background: ${statusBg};
+            color: ${statusColor};
             flex-shrink: 0;
           }
 
-          .card-header .icon ha-icon {
-            --mdc-icon-size: 24px;
+          .header .icon ha-icon {
+            --mdc-icon-size: 20px;
           }
 
-          .card-header .info {
+          .header .title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
             flex: 1;
           }
 
-          .card-header .title {
-            font-size: 16px;
+          .header .badge {
+            font-size: 11px;
             font-weight: 600;
-            color: var(--text-primary);
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: ${statusBg};
+            color: ${statusColor};
           }
 
-          .card-header .subtitle {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-top: 2px;
+          .alerts {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 10px;
           }
 
-          .status-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            padding: 12px 16px;
+          .alert {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
           }
 
-          .status-item {
-            background: var(--ha-card-background, var(--card-background-color, #f8f9fa));
-            border: 1px solid var(--divider-color, #e0e0e0);
-            border-radius: 12px;
-            padding: 14px;
-            text-align: center;
-            transition: all 0.3s ease;
+          .alert ha-icon {
+            --mdc-icon-size: 18px;
           }
 
-          .status-item.warning {
-            background: #fef3e2;
-            border-color: #f39c12;
-          }
-
-          .status-item.error {
+          .alert.error {
             background: #fde8e8;
-            border-color: #e74c3c;
+            color: #e74c3c;
             animation: pulse-error 2s infinite;
           }
 
-          .status-item.ok {
-            background: #e8f5e9;
-            border-color: #27ae60;
+          .alert.warning {
+            background: #fef3e2;
+            color: #e67e22;
           }
 
           @keyframes pulse-error {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.3); }
-            50% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.2); }
+            50% { box-shadow: 0 0 0 6px rgba(231, 76, 60, 0); }
           }
 
-          .status-item .status-icon {
-            font-size: 28px;
-            margin-bottom: 6px;
-          }
-
-          .status-item .status-icon ha-icon {
-            --mdc-icon-size: 28px;
-          }
-
-          .status-item.warning .status-icon { color: #f39c12; }
-          .status-item.error .status-icon { color: #e74c3c; }
-          .status-item.ok .status-icon { color: #27ae60; }
-
-          .status-item .status-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 2px;
-          }
-
-          .status-item .status-value {
-            font-size: 11px;
-            color: var(--text-secondary);
-          }
-
-          .control-section {
-            padding: 8px 16px 16px 16px;
-          }
-
-          .control-button {
+          .toggle-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid ${abschaltenOn ? "#e74c3c" : "var(--divider-color, #e0e0e0)"};
-            border-radius: 12px;
+            margin-top: 10px;
+            padding: 10px 12px;
+            border: 1px solid ${abschaltenOn ? "#e74c3c" : "var(--divider-color, #e0e0e0)"};
+            border-radius: 10px;
             background: ${abschaltenOn ? "#fde8e8" : "transparent"};
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-sizing: border-box;
+            transition: all 0.2s ease;
           }
 
-          .control-button:hover {
+          .toggle-row:hover {
             border-color: ${abschaltenOn ? "#c0392b" : "#f39c12"};
-            background: ${abschaltenOn ? "#fbd5d5" : "#fef9f0"};
           }
 
-          .control-button:active {
+          .toggle-row:active {
             transform: scale(0.98);
           }
 
-          .control-left {
+          .toggle-left {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
           }
 
-          .control-left ha-icon {
-            --mdc-icon-size: 22px;
+          .toggle-left ha-icon {
+            --mdc-icon-size: 20px;
             color: ${abschaltenOn ? "#e74c3c" : "var(--text-secondary)"};
           }
 
-          .control-label {
-            font-size: 14px;
+          .toggle-label {
+            font-size: 13px;
             font-weight: 500;
             color: var(--text-primary);
           }
 
-          .control-state {
-            font-size: 12px;
-            color: var(--text-secondary);
-          }
-
-          .toggle-indicator {
-            width: 48px;
-            height: 26px;
-            border-radius: 13px;
+          .toggle-switch {
+            width: 40px;
+            height: 22px;
+            border-radius: 11px;
             background: ${abschaltenOn ? "#e74c3c" : "#ccc"};
             position: relative;
-            transition: background 0.3s ease;
             flex-shrink: 0;
+            transition: background 0.2s ease;
           }
 
-          .toggle-indicator::after {
+          .toggle-switch::after {
             content: '';
             position: absolute;
-            top: 3px;
-            left: ${abschaltenOn ? "24px" : "3px"};
-            width: 20px;
-            height: 20px;
+            top: 2px;
+            left: ${abschaltenOn ? "20px" : "2px"};
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            transition: left 0.3s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            transition: left 0.2s ease;
+          }
+
+          .demo-hint {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-style: italic;
           }
         </style>
 
-        ${demo ? '<div class="demo-banner">VORSCHAU — Bitte Entities im Editor konfigurieren</div>' : ""}
-
-        <div class="card-header">
-          <div class="icon">
-            <ha-icon icon="mdi:smoke-detector"></ha-icon>
-          </div>
-          <div class="info">
+        <div class="card">
+          <div class="header">
+            <div class="icon">
+              <ha-icon icon="mdi:smoke-detector"></ha-icon>
+            </div>
             <div class="title">${this._config.title}</div>
-            <div class="subtitle">
-              ${demo
-                ? "Beispielansicht"
-                : fehlerOn
-                  ? "Fehler aktiv!"
-                  : abschaltungOn
-                    ? "Abgeschaltet"
-                    : "Betriebsbereit"
-              }
-            </div>
-          </div>
-        </div>
-
-        <div class="status-grid">
-          <div class="status-item ${
-            demo ? "ok" : !abschaltungEntity ? "" : abschaltungOn ? "warning" : "ok"
-          }">
-            <div class="status-icon">
-              <ha-icon icon="${abschaltungOn ? "mdi:smoke-detector-off" : "mdi:smoke-detector"}"></ha-icon>
-            </div>
-            <div class="status-label">Abschaltung</div>
-            <div class="status-value">
-              ${demo ? "Aktiv" : !abschaltungEntity ? "<em>Entity nicht gefunden</em>" : abschaltungOn ? "Abgeschaltet" : "Aktiv"}
-            </div>
+            <div class="badge">${
+              demo ? "Vorschau" : fehlerOn ? "Fehler" : abschaltungOn ? "Aus" : "OK"
+            }</div>
           </div>
 
-          <div class="status-item ${
-            demo ? "ok" : !fehlerEntity ? "" : fehlerOn ? "error" : "ok"
-          }">
-            <div class="status-icon">
-              <ha-icon icon="${fehlerOn ? "mdi:smoke-detector-alert" : "mdi:check-circle"}"></ha-icon>
-            </div>
-            <div class="status-label">Fehler</div>
-            <div class="status-value">
-              ${demo ? "Kein Fehler" : !fehlerEntity ? "<em>Entity nicht gefunden</em>" : fehlerOn ? "Fehler!" : "Kein Fehler"}
-            </div>
-          </div>
-        </div>
+          ${hasAlerts ? '<div class="alerts">' + alerts.join("") + "</div>" : ""}
 
-        <div class="control-section">
-          <div class="control-button" id="btn-toggle">
-            <div class="control-left">
+          <div class="toggle-row" id="btn-toggle">
+            <div class="toggle-left">
               <ha-icon icon="mdi:power"></ha-icon>
-              <div>
-                <div class="control-label">Rauchmelder abschalten</div>
-                <div class="control-state">${demo ? "Ist eingeschaltet" : abschaltenOn ? "Ist abgeschaltet" : "Ist eingeschaltet"}</div>
-              </div>
+              <div class="toggle-label">${abschaltenOn ? "Ist abgeschaltet" : "Abschalten"}</div>
             </div>
-            <div class="toggle-indicator"></div>
+            <div class="toggle-switch"></div>
           </div>
+
+          ${demo ? '<div class="demo-hint">Entities im Editor konfigurieren</div>' : ""}
         </div>
       </ha-card>
     `;
@@ -428,7 +346,7 @@ class RauchmelderCardEditor extends HTMLElement {
       </style>
       <div class="editor">
         <div class="hint">
-          Alle Felder sind optional. Ohne Entities wird eine Vorschau angezeigt.
+          Alle Felder sind optional. Abschaltung und Fehler werden nur angezeigt wenn aktiv.
         </div>
         <label>
           Titel
@@ -437,17 +355,17 @@ class RauchmelderCardEditor extends HTMLElement {
         <label>
           Abschaltung Entity (binary_sensor)
           <input id="entity_abschaltung" value="${this._config.entity_abschaltung || ""}" placeholder="binary_sensor.rauchmelder_abschaltung" />
-          <small>1-Bit Status: Zeigt ob der Melder abgeschaltet ist</small>
+          <small>1-Bit Status: Wird nur angezeigt wenn abgeschaltet</small>
         </label>
         <label>
           Fehler Entity (binary_sensor)
           <input id="entity_fehler" value="${this._config.entity_fehler || ""}" placeholder="binary_sensor.rauchmelder_fehler" />
-          <small>1-Bit Status: Zeigt ob ein Fehler vorliegt</small>
+          <small>1-Bit Status: Wird nur angezeigt wenn Fehler vorliegt</small>
         </label>
         <label>
           Abschalten Entity (switch)
           <input id="entity_abschalten" value="${this._config.entity_abschalten || ""}" placeholder="switch.rauchmelder_abschalten" />
-          <small>1-Bit Steuerung: Schaltet den Melder ab</small>
+          <small>1-Bit Steuerung: Toggle zum Abschalten</small>
         </label>
       </div>
     `;
@@ -475,6 +393,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "rauchmelder-card",
   name: "Rauchmelder Card",
-  description: "Zeigt Abschaltung, Fehler und Abschalten-Steuerung für Rauchmelder (1-Bit KNX Objekte).",
+  description: "Kompakte Rauchmelder-Karte mit Abschaltung, Fehler und Steuerung (1-Bit KNX).",
   preview: true,
 });
