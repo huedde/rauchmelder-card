@@ -336,138 +336,174 @@ class RauchmelderCardEditor extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         .editor {
-          padding: 16px;
           display: flex;
           flex-direction: column;
+          gap: 16px;
+          padding: 0;
+        }
+
+        .section {
+          border: 1px solid var(--divider-color, #3a3a3a);
+          border-radius: 12px;
+          padding: 16px;
+          background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
+        }
+
+        .section-title {
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: var(--primary-text-color, #fff);
+          margin-bottom: 14px;
+        }
+
+        .grid-1 {
+          display: grid;
+          grid-template-columns: 1fr;
           gap: 12px;
         }
-        .editor label {
+
+        .grid-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .field {
           display: flex;
           flex-direction: column;
           gap: 4px;
-          font-size: 14px;
-          color: var(--primary-text-color);
         }
-        .editor input[type="text"] {
-          padding: 8px 12px;
-          border: 1px solid var(--divider-color, #ccc);
-          border-radius: 8px;
-          font-size: 14px;
-          background: var(--card-background-color, #fff);
-          color: var(--primary-text-color);
+
+        .field-label {
+          font-size: 12px;
+          color: var(--secondary-text-color, #aaa);
         }
-        .editor small {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-        }
-        .editor .section-title {
+
+        .field input[type="text"] {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid var(--divider-color, #3a3a3a);
+          border-radius: 10px;
           font-size: 13px;
-          font-weight: 600;
-          color: var(--primary-text-color);
-          margin-top: 8px;
-          padding-bottom: 4px;
-          border-bottom: 1px solid var(--divider-color, #e0e0e0);
+          background: var(--input-fill-color, var(--secondary-background-color, #2a2a2a));
+          color: var(--primary-text-color, #fff);
+          box-sizing: border-box;
+          outline: none;
+          transition: border-color 0.2s;
         }
-        .color-row {
+
+        .field input[type="text"]:focus {
+          border-color: var(--primary-color, #03a9f4);
+        }
+
+        .field input[type="text"]::placeholder {
+          color: var(--secondary-text-color, #666);
+          font-size: 12px;
+        }
+
+        .color-field {
           display: flex;
-          align-items: center;
-          gap: 8px;
+          flex-direction: column;
+          gap: 4px;
         }
-        .color-row input[type="color"] {
-          width: 36px;
-          height: 36px;
-          border: none;
+
+        .color-field .color-label {
+          font-size: 12px;
+          color: var(--secondary-text-color, #aaa);
+        }
+
+        .color-field input[type="color"] {
+          width: 60px;
+          height: 32px;
+          border: 2px solid var(--divider-color, #3a3a3a);
           border-radius: 8px;
           cursor: pointer;
-          padding: 0;
-          background: none;
+          padding: 2px;
+          background: transparent;
+          transition: border-color 0.2s;
         }
-        .color-row input[type="text"] {
-          flex: 1;
-          padding: 8px 12px;
-          border: 1px solid var(--divider-color, #ccc);
-          border-radius: 8px;
-          font-size: 14px;
-          background: var(--card-background-color, #fff);
-          color: var(--primary-text-color);
-        }
-        .hint {
-          background: var(--info-color, #3b4cca);
-          color: white;
-          padding: 10px 14px;
-          border-radius: 8px;
-          font-size: 12px;
-          line-height: 1.5;
+
+        .color-field input[type="color"]:hover {
+          border-color: var(--primary-color, #03a9f4);
         }
       </style>
+
       <div class="editor">
-        <div class="hint">
-          Alle Felder optional. Farben und Icons individuell anpassbar.
+        <!-- ALLGEMEIN -->
+        <div class="section">
+          <div class="section-title">Allgemein</div>
+          <div class="grid-1">
+            <div class="field">
+              <span class="field-label">Titel</span>
+              <input type="text" id="title" value="${this._config.title || "Rauchmelder"}" />
+            </div>
+          </div>
         </div>
 
-        <div class="section-title">Allgemein</div>
-        <label>
-          Titel
-          <input type="text" id="title" value="${this._config.title || "Rauchmelder"}" />
-        </label>
-
-        <div class="section-title">Entities</div>
-        <label>
-          Abschaltung (binary_sensor)
-          <input type="text" id="entity_abschaltung" value="${this._config.entity_abschaltung || ""}" placeholder="binary_sensor.rauchmelder_abschaltung" />
-        </label>
-        <label>
-          Fehler (binary_sensor)
-          <input type="text" id="entity_fehler" value="${this._config.entity_fehler || ""}" placeholder="binary_sensor.rauchmelder_fehler" />
-        </label>
-        <label>
-          Abschalten (switch)
-          <input type="text" id="entity_abschalten" value="${this._config.entity_abschalten || ""}" placeholder="switch.rauchmelder_abschalten" />
-        </label>
-
-        <div class="section-title">Icons</div>
-        <label>
-          Haupt-Icon
-          <input type="text" id="icon" value="${this._config.icon || "mdi:smoke-detector"}" placeholder="mdi:smoke-detector" />
-        </label>
-        <label>
-          Fehler-Icon
-          <input type="text" id="icon_fehler" value="${this._config.icon_fehler || "mdi:smoke-detector-alert"}" placeholder="mdi:smoke-detector-alert" />
-        </label>
-        <label>
-          Abschaltung-Icon
-          <input type="text" id="icon_abschaltung" value="${this._config.icon_abschaltung || "mdi:smoke-detector-off"}" placeholder="mdi:smoke-detector-off" />
-        </label>
-
-        <div class="section-title">Farben</div>
-        <label>
-          OK-Farbe
-          <div class="color-row">
-            <input type="color" id="color_ok_picker" value="${this._config.color_ok || "#27ae60"}" />
-            <input type="text" id="color_ok" value="${this._config.color_ok || "#27ae60"}" placeholder="#27ae60" />
+        <!-- ENTITIES -->
+        <div class="section">
+          <div class="section-title">Entities</div>
+          <div class="grid-2">
+            <div class="field">
+              <span class="field-label">Abschaltung</span>
+              <input type="text" id="entity_abschaltung" value="${this._config.entity_abschaltung || ""}" placeholder="binary_sensor..." />
+            </div>
+            <div class="field">
+              <span class="field-label">Fehler</span>
+              <input type="text" id="entity_fehler" value="${this._config.entity_fehler || ""}" placeholder="binary_sensor..." />
+            </div>
+            <div class="field">
+              <span class="field-label">Abschalten</span>
+              <input type="text" id="entity_abschalten" value="${this._config.entity_abschalten || ""}" placeholder="switch..." />
+            </div>
           </div>
-        </label>
-        <label>
-          Fehler-Farbe
-          <div class="color-row">
-            <input type="color" id="color_fehler_picker" value="${this._config.color_fehler || "#e74c3c"}" />
-            <input type="text" id="color_fehler" value="${this._config.color_fehler || "#e74c3c"}" placeholder="#e74c3c" />
+        </div>
+
+        <!-- ICONS -->
+        <div class="section">
+          <div class="section-title">Icons</div>
+          <div class="grid-2">
+            <div class="field">
+              <span class="field-label">Haupt-Icon</span>
+              <input type="text" id="icon" value="${this._config.icon || "mdi:smoke-detector"}" placeholder="mdi:smoke-detector" />
+            </div>
+            <div class="field">
+              <span class="field-label">Fehler-Icon</span>
+              <input type="text" id="icon_fehler" value="${this._config.icon_fehler || "mdi:smoke-detector-alert"}" placeholder="mdi:smoke-detector-alert" />
+            </div>
+            <div class="field">
+              <span class="field-label">Abschaltung-Icon</span>
+              <input type="text" id="icon_abschaltung" value="${this._config.icon_abschaltung || "mdi:smoke-detector-off"}" placeholder="mdi:smoke-detector-off" />
+            </div>
           </div>
-        </label>
-        <label>
-          Abschaltung-Farbe
-          <div class="color-row">
-            <input type="color" id="color_abschaltung_picker" value="${this._config.color_abschaltung || "#f39c12"}" />
-            <input type="text" id="color_abschaltung" value="${this._config.color_abschaltung || "#f39c12"}" placeholder="#f39c12" />
+        </div>
+
+        <!-- FARBEN -->
+        <div class="section">
+          <div class="section-title">Farben (optional)</div>
+          <div class="grid-2">
+            <div class="color-field">
+              <span class="color-label">OK</span>
+              <input type="color" id="color_ok_picker" value="${this._config.color_ok || "#27ae60"}" />
+            </div>
+            <div class="color-field">
+              <span class="color-label">Fehler</span>
+              <input type="color" id="color_fehler_picker" value="${this._config.color_fehler || "#e74c3c"}" />
+            </div>
+            <div class="color-field">
+              <span class="color-label">Abschaltung</span>
+              <input type="color" id="color_abschaltung_picker" value="${this._config.color_abschaltung || "#f39c12"}" />
+            </div>
           </div>
-        </label>
+        </div>
       </div>
     `;
 
     const textFields = [
       "title", "entity_abschaltung", "entity_fehler", "entity_abschalten",
-      "icon", "icon_fehler", "icon_abschaltung",
-      "color_ok", "color_fehler", "color_abschaltung"
+      "icon", "icon_fehler", "icon_abschaltung"
     ];
 
     textFields.forEach((key) => {
@@ -475,10 +511,6 @@ class RauchmelderCardEditor extends HTMLElement {
       if (input) {
         input.addEventListener("input", (e) => {
           this._config = { ...this._config, [key]: e.target.value };
-          const picker = this.shadowRoot.getElementById(key + "_picker");
-          if (picker && e.target.value.match(/^#[0-9a-fA-F]{6}$/)) {
-            picker.value = e.target.value;
-          }
           this._fireChanged();
         });
       }
@@ -489,8 +521,6 @@ class RauchmelderCardEditor extends HTMLElement {
       if (picker) {
         picker.addEventListener("input", (e) => {
           this._config = { ...this._config, [key]: e.target.value };
-          const textInput = this.shadowRoot.getElementById(key);
-          if (textInput) textInput.value = e.target.value;
           this._fireChanged();
         });
       }
