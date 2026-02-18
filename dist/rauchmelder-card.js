@@ -3,7 +3,7 @@
  * Kompakt, individuell konfigurierbare Icons, Farben und Texte.
  */
 
-const CARD_VERSION = "1.5.0";
+const CARD_VERSION = "1.6.0";
 
 console.info(
   `%c RAUCHMELDER-CARD %c v${CARD_VERSION} `,
@@ -189,7 +189,7 @@ class RauchmelderCard extends HTMLElement {
     }
 
     const badgeText = demo ? "Vorschau" : fehlerOn ? c.text_fehler : abschaltungOn ? c.text_abschaltung : c.text_ok;
-    const lastChanged = !demo && c.entity_abschalten ? this._lastChanged(c.entity_abschalten) : "";
+    const lastChanged = !demo && abschaltenOn && c.entity_abschalten ? this._lastChanged(c.entity_abschalten) : "";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
@@ -283,7 +283,16 @@ class RauchmelderCard extends HTMLElement {
           .toggle-row {
             display: flex;
             align-items: center;
+            gap: 8px;
             margin-top: 8px;
+          }
+
+          .toggle-row .abgeschaltet-icon {
+            color: ${c.color_fehler};
+          }
+
+          .toggle-row .abgeschaltet-icon ha-icon {
+            --mdc-icon-size: 22px;
           }
 
           .toggle-switch {
@@ -343,6 +352,7 @@ class RauchmelderCard extends HTMLElement {
 
           <div class="toggle-row">
             <div class="toggle-switch" id="btn-toggle"></div>
+            ${!demo && abschaltenOn ? '<div class="abgeschaltet-icon"><ha-icon icon="mdi:power"></ha-icon></div>' : ""}
           </div>
 
           ${demo ? '<div class="demo-hint">Entities im Editor konfigurieren</div>' : ""}
