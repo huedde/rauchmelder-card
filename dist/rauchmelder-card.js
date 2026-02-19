@@ -1,9 +1,11 @@
 /**
- * Rauchmelder Card – Home Assistant Custom Lovelace Card
- * Kompakt, individuell konfigurierbare Icons, Farben und Texte.
+ * Rauchmelder Card v2 – Home Assistant Custom Lovelace Card
+ * Oben links: Rauchmelder-Symbol + Raumbezeichnung
+ * Mitte: 3 binäre Entitäten mit eigenen Meldungen und Farben (aktiv/inaktiv)
+ * Unten: Schalter zum Ausschalten, rechtsbündig
  */
 
-const CARD_VERSION = "1.6.0";
+const CARD_VERSION = "2.0.0";
 
 console.info(
   `%c RAUCHMELDER-CARD %c v${CARD_VERSION} `,
@@ -13,40 +15,24 @@ console.info(
 
 const ICON_OPTIONS = [
   { value: "mdi:smoke-detector", label: "Rauchmelder" },
+  { value: "mdi:smoke-detector-variant", label: "Rauchmelder Variante" },
   { value: "mdi:smoke-detector-alert", label: "Rauchmelder Alarm" },
   { value: "mdi:smoke-detector-off", label: "Rauchmelder Aus" },
-  { value: "mdi:smoke-detector-off-outline", label: "Rauchmelder Aus (Outline)" },
   { value: "mdi:smoke-detector-outline", label: "Rauchmelder (Outline)" },
-  { value: "mdi:smoke-detector-variant", label: "Rauchmelder Variante" },
-  { value: "mdi:smoke-detector-variant-alert", label: "Rauchmelder Variante Alarm" },
-  { value: "mdi:smoke-detector-variant-off", label: "Rauchmelder Variante Aus" },
   { value: "mdi:fire", label: "Feuer" },
-  { value: "mdi:fire-alert", label: "Feuer Alarm" },
-  { value: "mdi:fire-off", label: "Feuer Aus" },
-  { value: "mdi:alarm-light", label: "Alarmleuchte" },
-  { value: "mdi:alarm-light-off", label: "Alarmleuchte Aus" },
-  { value: "mdi:alarm-light-outline", label: "Alarmleuchte (Outline)" },
-  { value: "mdi:alert", label: "Warnung" },
-  { value: "mdi:alert-circle", label: "Warnung Kreis" },
-  { value: "mdi:alert-outline", label: "Warnung (Outline)" },
-  { value: "mdi:check-circle", label: "OK Kreis" },
-  { value: "mdi:check-circle-outline", label: "OK Kreis (Outline)" },
   { value: "mdi:shield-check", label: "Schild OK" },
-  { value: "mdi:shield-alert", label: "Schild Alarm" },
-  { value: "mdi:shield-off", label: "Schild Aus" },
   { value: "mdi:bell", label: "Glocke" },
-  { value: "mdi:bell-alert", label: "Glocke Alarm" },
-  { value: "mdi:bell-off", label: "Glocke Aus" },
-  { value: "mdi:power", label: "Power" },
-  { value: "mdi:power-off", label: "Power Aus" },
-  { value: "mdi:lock", label: "Schloss" },
-  { value: "mdi:lock-open", label: "Schloss offen" },
-  { value: "mdi:lock-off", label: "Schloss Aus" },
-  { value: "mdi:close-circle", label: "X Kreis" },
-  { value: "mdi:cancel", label: "Abbrechen" },
-  { value: "mdi:eye", label: "Auge" },
-  { value: "mdi:eye-off", label: "Auge Aus" },
 ];
+
+function defaultEntity(i) {
+  return {
+    entity: "",
+    label_active: i === 0 ? "Abgeschaltet" : i === 1 ? "Fehler" : "Wartung",
+    label_inactive: i === 0 ? "Aktiv" : i === 1 ? "OK" : "OK",
+    color_active: i === 0 ? "#f39c12" : i === 1 ? "#e74c3c" : "#e67e22",
+    color_inactive: "#27ae60",
+  };
+}
 
 class RauchmelderCard extends HTMLElement {
   constructor() {
@@ -62,32 +48,27 @@ class RauchmelderCard extends HTMLElement {
 
   static getStubConfig() {
     return {
-      title: "Rauchmelder",
-      entity_abschaltung: "",
-      entity_fehler: "",
+      title: "G0.03",
+      icon: "mdi:smoke-detector-variant",
       entity_abschalten: "",
+      entities: [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
-  }
-
-  static getLayoutOptions() {
-    return { grid_columns: 2, grid_min_columns: 2, grid_rows: 2 };
   }
 
   setConfig(config) {
     this._config = {
       title: config.title || "Rauchmelder",
-      entity_abschaltung: config.entity_abschaltung || "",
-      entity_fehler: config.entity_fehler || "",
+      icon: config.icon || "mdi:smoke-detector-variant",
       entity_abschalten: config.entity_abschalten || "",
-      icon: config.icon || "mdi:smoke-detector",
-      icon_fehler: config.icon_fehler || "mdi:smoke-detector-alert",
-      icon_abschaltung: config.icon_abschaltung || "mdi:smoke-detector-off",
-      color_ok: config.color_ok || "#27ae60",
-      color_fehler: config.color_fehler || "#e74c3c",
-      color_abschaltung: config.color_abschaltung || "#f39c12",
-      text_fehler: config.text_fehler || "Fehler aktiv",
-      text_abschaltung: config.text_abschaltung || "Abgeschaltet",
-      text_ok: config.text_ok || "OK",
+      entities: Array.isArray(config.entities) && config.entities.length >= 3
+        ? config.entities.map((e, i) => ({
+            entity: e.entity || "",
+            label_active: e.label_active || defaultEntity(i).label_active,
+            label_inactive: e.label_inactive || defaultEntity(i).label_inactive,
+            color_active: e.color_active || defaultEntity(i).color_active,
+            color_inactive: e.color_inactive || "#27ae60",
+          }))
+        : [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
     this._render();
   }
@@ -98,11 +79,7 @@ class RauchmelderCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 2;
-  }
-
-  getLayoutOptions() {
-    return { grid_columns: 2, grid_min_columns: 2, grid_rows: 2 };
+    return 4;
   }
 
   _getState(entityId) {
@@ -117,15 +94,8 @@ class RauchmelderCard extends HTMLElement {
     return s === "on" || s === "locked";
   }
 
-  _isDemo() {
-    return (
-      !this._config.entity_abschaltung &&
-      !this._config.entity_fehler &&
-      !this._config.entity_abschalten
-    );
-  }
-
-  _toggleLock(entityId) {
+  _toggleAbschalten() {
+    const entityId = this._config.entity_abschalten;
     if (!this._hass || !entityId) return;
     const state = this._getState(entityId);
     if (!state) return;
@@ -140,199 +110,118 @@ class RauchmelderCard extends HTMLElement {
     }
   }
 
-  _lastChanged(entityId) {
-    const state = this._getState(entityId);
-    if (!state) return "";
-    const d = new Date(state.last_changed);
-    return d.toLocaleString("de-DE", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  _hexToRgba(hex, alpha) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
-  }
-
   _render() {
     if (!this.shadowRoot || !this._config) return;
 
     const c = this._config;
-    const demo = this._isDemo();
-    const abschaltungOn = demo ? false : this._isActive(c.entity_abschaltung);
-    const fehlerOn = demo ? false : this._isActive(c.entity_fehler);
-    const abschaltenOn = demo ? false : this._isActive(c.entity_abschalten);
+    const abschaltenOn = c.entity_abschalten ? this._isActive(c.entity_abschalten) : false;
 
-    const hasAlerts = abschaltungOn || fehlerOn;
-
-    const statusColor = fehlerOn ? c.color_fehler : abschaltungOn ? c.color_abschaltung : c.color_ok;
-    const statusBg = this._hexToRgba(statusColor, 0.15);
-
-    const alerts = [];
-    if (fehlerOn) {
-      alerts.push(
-        '<div class="alert" style="background:' + this._hexToRgba(c.color_fehler, 0.15) + ";color:" + c.color_fehler + '">' +
-        '<ha-icon icon="' + c.icon_fehler + '"></ha-icon> ' + c.text_fehler + '</div>'
-      );
-    }
-    if (abschaltungOn) {
-      alerts.push(
-        '<div class="alert" style="background:' + this._hexToRgba(c.color_abschaltung, 0.15) + ";color:" + c.color_abschaltung + '">' +
-        '<ha-icon icon="' + c.icon_abschaltung + '"></ha-icon> ' + c.text_abschaltung + '</div>'
-      );
-    }
-
-    const badgeText = demo ? "Vorschau" : fehlerOn ? c.text_fehler : abschaltungOn ? c.text_abschaltung : c.text_ok;
-    const lastChanged = !demo && abschaltenOn && c.entity_abschalten ? this._lastChanged(c.entity_abschalten) : "";
+    const rows = c.entities.map((e, i) => {
+      const active = e.entity ? this._isActive(e.entity) : false;
+      const label = active ? e.label_active : e.label_inactive;
+      const color = active ? e.color_active : e.color_inactive;
+      const bg = this._hexToRgba(color, 0.15);
+      return {
+        label,
+        color,
+        bg,
+        hasEntity: !!e.entity,
+      };
+    });
 
     this.shadowRoot.innerHTML = `
       <ha-card>
         <style>
           :host {
-            --text-primary: var(--primary-text-color, #333);
-            --text-secondary: var(--secondary-text-color, #777);
-          }
-
-          ha-card {
-            max-width: 250px;
+            --text-primary: var(--primary-text-color, #fff);
+            --text-secondary: var(--secondary-text-color, #aaa);
           }
 
           .card {
-            padding: 10px 12px;
+            padding: 12px 16px;
           }
 
           .header {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
+            margin-bottom: 12px;
           }
 
           .header .icon {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: ${statusBg};
-            color: ${statusColor};
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
             flex-shrink: 0;
           }
 
           .header .icon ha-icon {
-            --mdc-icon-size: 18px;
-          }
-
-          .header .info {
-            flex: 1;
-            min-width: 0;
+            --mdc-icon-size: 24px;
           }
 
           .header .title {
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
             color: var(--text-primary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
           }
 
-          .header .last-changed {
-            font-size: 10px;
-            color: var(--text-secondary);
-          }
-
-          .header .badge {
-            font-size: 10px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 8px;
-            background: ${statusBg};
-            color: ${statusColor};
-            border: 1px solid ${this._hexToRgba(statusColor, 0.3)};
-            flex-shrink: 0;
-          }
-
-          .alerts {
+          .binary-rows {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            margin-top: 8px;
-          }
-
-          .alert {
-            display: flex;
-            align-items: center;
             gap: 6px;
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
+            margin-bottom: 12px;
           }
 
-          .alert ha-icon {
-            --mdc-icon-size: 16px;
+          .binary-row {
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.1);
           }
 
           .toggle-row {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-top: 8px;
-          }
-
-          .toggle-row .abgeschaltet-icon {
-            color: ${c.color_fehler};
-          }
-
-          .toggle-row .abgeschaltet-icon ha-icon {
-            --mdc-icon-size: 22px;
+            justify-content: flex-end;
+            margin-top: 4px;
           }
 
           .toggle-switch {
-            width: 36px;
-            height: 20px;
-            border-radius: 10px;
-            background: ${abschaltenOn ? c.color_fehler : "#ccc"};
+            width: 44px;
+            height: 24px;
+            border-radius: 12px;
+            background: ${abschaltenOn ? "#e74c3c" : "#555"};
             position: relative;
-            flex-shrink: 0;
             cursor: pointer;
             transition: background 0.2s ease;
+            flex-shrink: 0;
           }
 
           .toggle-switch:hover {
-            opacity: 0.85;
+            opacity: 0.9;
           }
 
           .toggle-switch:active {
-            transform: scale(0.95);
+            transform: scale(0.96);
           }
 
           .toggle-switch::after {
             content: '';
             position: absolute;
             top: 2px;
-            left: ${abschaltenOn ? "18px" : "2px"};
-            width: 16px;
-            height: 16px;
+            left: ${abschaltenOn ? "22px" : "2px"};
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: white;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
             transition: left 0.2s ease;
-          }
-
-          .demo-hint {
-            text-align: center;
-            font-size: 10px;
-            color: var(--text-secondary);
-            margin-top: 6px;
-            font-style: italic;
           }
         </style>
 
@@ -341,393 +230,277 @@ class RauchmelderCard extends HTMLElement {
             <div class="icon">
               <ha-icon icon="${c.icon}"></ha-icon>
             </div>
-            <div class="info">
-              <div class="title">${c.title}</div>
-              ${lastChanged ? '<div class="last-changed">' + lastChanged + '</div>' : ""}
-            </div>
-            <div class="badge">${badgeText}</div>
+            <div class="title">${c.title}</div>
           </div>
 
-          ${hasAlerts ? '<div class="alerts">' + alerts.join("") + "</div>" : ""}
+          <div class="binary-rows">
+            ${rows.map((r) => `
+              <div class="binary-row" style="background:${r.bg};color:${r.color};border-color:${r.color}40;">
+                ${r.hasEntity ? r.label : "—"}
+              </div>
+            `).join("")}
+          </div>
 
           <div class="toggle-row">
             <div class="toggle-switch" id="btn-toggle"></div>
-            ${!demo && abschaltenOn ? '<div class="abgeschaltet-icon"><ha-icon icon="mdi:power"></ha-icon></div>' : ""}
           </div>
-
-          ${demo ? '<div class="demo-hint">Entities im Editor konfigurieren</div>' : ""}
         </div>
       </ha-card>
     `;
 
     const btn = this.shadowRoot.getElementById("btn-toggle");
-    if (btn && !demo) {
-      btn.addEventListener("click", () => {
-        this._toggleLock(c.entity_abschalten);
-      });
+    if (btn && c.entity_abschalten) {
+      btn.addEventListener("click", () => this._toggleAbschalten());
     }
+  }
+
+  _hexToRgba(hex, alpha) {
+    if (!hex || hex.length < 7) return "rgba(0,0,0,0.1)";
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
   }
 }
 
-/* ── Visueller Karteneditor ──────────────────────────────── */
+/* ── Editor ──────────────────────────────────────────────── */
 class RauchmelderCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this._config = {};
-    this._hass = null;
     this._rendered = false;
   }
 
   setConfig(config) {
-    this._config = { ...config };
-    if (!this._rendered) {
-      this._render();
+    this._config = JSON.parse(JSON.stringify(config));
+    if (!this._config.entities || !Array.isArray(this._config.entities) || this._config.entities.length < 3) {
+      this._config.entities = [defaultEntity(0), defaultEntity(1), defaultEntity(2)];
     }
+    if (!this._rendered) this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
   }
 
-  _fireChanged() {
-    this.dispatchEvent(
-      new CustomEvent("config-changed", { detail: { config: { ...this._config } } })
-    );
-  }
-
-  _iconOptions(selected) {
-    return ICON_OPTIONS.map(
-      (o) => '<option value="' + o.value + '"' + (o.value === selected ? " selected" : "") + ">" + o.label + " (" + o.value + ")</option>"
-    ).join("");
-  }
-
-  _updateIconPreview(key) {
-    const preview = this.shadowRoot.getElementById(key + "_preview");
-    if (preview) {
-      preview.innerHTML = '<ha-icon icon="' + (this._config[key] || "mdi:smoke-detector") + '"></ha-icon> Vorschau';
-    }
+  _fire() {
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config } }));
   }
 
   _render() {
     this._rendered = true;
+    const c = this._config;
+    const e0 = c.entities[0] || defaultEntity(0);
+    const e1 = c.entities[1] || defaultEntity(1);
+    const e2 = c.entities[2] || defaultEntity(2);
 
     this.shadowRoot.innerHTML = `
       <style>
-        .editor {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          padding: 0;
-        }
-
+        .editor { padding: 0; display: flex; flex-direction: column; gap: 16px; }
         .section {
           border: 1px solid var(--divider-color, #3a3a3a);
           border-radius: 12px;
           padding: 16px;
-          background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
+          background: var(--card-background-color, #1c1c1c);
         }
-
         .section-title {
-          font-size: 12px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: var(--primary-text-color, #fff);
-          margin-bottom: 14px;
+          font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+          color: var(--primary-text-color); margin-bottom: 12px;
         }
-
-        .grid-1 {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
+        .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+        .field:last-child { margin-bottom: 0; }
+        .field-label { font-size: 12px; color: var(--secondary-text-color); }
+        .field input, .field select {
+          width: 100%; padding: 10px 12px; border: 1px solid var(--divider-color);
+          border-radius: 10px; font-size: 13px;
+          background: var(--input-fill-color, #2a2a2a); color: var(--primary-text-color);
+          box-sizing: border-box; outline: none;
         }
-
-        .grid-2 {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-        }
-
-        .grid-3 {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 12px;
-        }
-
-        .field {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .field-label {
-          font-size: 12px;
-          color: var(--secondary-text-color, #aaa);
-        }
-
-        .field input[type="text"],
-        .field select {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1px solid var(--divider-color, #3a3a3a);
-          border-radius: 10px;
-          font-size: 13px;
-          background: var(--input-fill-color, var(--secondary-background-color, #2a2a2a));
-          color: var(--primary-text-color, #fff);
-          box-sizing: border-box;
-          outline: none;
-          transition: border-color 0.2s;
-          -webkit-appearance: none;
-          appearance: none;
-        }
-
-        .field select {
-          cursor: pointer;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23aaa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 12px center;
-          padding-right: 32px;
-        }
-
-        .field input[type="text"]:focus,
-        .field select:focus {
-          border-color: var(--primary-color, #03a9f4);
-        }
-
-        .field input[type="text"]::placeholder {
-          color: var(--secondary-text-color, #666);
-          font-size: 12px;
-        }
-
-        .icon-preview {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-top: 4px;
-          font-size: 11px;
-          color: var(--secondary-text-color, #aaa);
-        }
-
-        .icon-preview ha-icon {
-          --mdc-icon-size: 20px;
-          color: var(--primary-text-color, #fff);
-        }
-
-        .color-field {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .color-field .color-label {
-          font-size: 12px;
-          color: var(--secondary-text-color, #aaa);
-        }
-
-        .color-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
+        .field select { cursor: pointer; -webkit-appearance: none; appearance: none; }
+        .color-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
         .color-row input[type="color"] {
-          width: 40px;
-          height: 34px;
-          border: 2px solid var(--divider-color, #3a3a3a);
-          border-radius: 8px;
-          cursor: pointer;
-          padding: 2px;
-          background: transparent;
-          flex-shrink: 0;
-          transition: border-color 0.2s;
+          width: 40px; height: 34px; border: 2px solid var(--divider-color);
+          border-radius: 8px; cursor: pointer; padding: 2px; background: transparent;
         }
-
-        .color-row input[type="color"]:hover {
-          border-color: var(--primary-color, #03a9f4);
-        }
-
         .color-row input[type="text"] {
-          flex: 1;
-          padding: 8px 10px;
-          border: 1px solid var(--divider-color, #3a3a3a);
-          border-radius: 8px;
-          font-size: 12px;
-          font-family: monospace;
-          background: var(--input-fill-color, var(--secondary-background-color, #2a2a2a));
-          color: var(--primary-text-color, #fff);
-          box-sizing: border-box;
-          outline: none;
-          min-width: 0;
+          flex: 1; padding: 8px 10px; border: 1px solid var(--divider-color);
+          border-radius: 8px; font-size: 12px; font-family: monospace;
+          background: var(--input-fill-color, #2a2a2a); color: var(--primary-text-color);
         }
-
-        .color-row input[type="text"]:focus {
-          border-color: var(--primary-color, #03a9f4);
-        }
+        .entity-block { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--divider-color); }
+        .entity-block:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
       </style>
 
       <div class="editor">
-        <!-- ALLGEMEIN -->
         <div class="section">
-          <div class="section-title">Allgemein</div>
-          <div class="grid-1">
-            <div class="field">
-              <span class="field-label">Titel</span>
-              <input type="text" id="title" value="${this._config.title || "Rauchmelder"}" />
-            </div>
+          <div class="section-title">Oben links (Raum)</div>
+          <div class="field">
+            <span class="field-label">Raumbezeichnung</span>
+            <input type="text" id="title" value="${c.title || "G0.03"}" />
+          </div>
+          <div class="field">
+            <span class="field-label">Rauchmelder-Icon</span>
+            <select id="icon">
+              ${ICON_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((c.icon || "mdi:smoke-detector-variant") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
+            </select>
           </div>
         </div>
 
-        <!-- ENTITIES -->
         <div class="section">
-          <div class="section-title">Entities</div>
-          <div class="grid-2">
-            <div class="field">
-              <span class="field-label">Abschaltung</span>
-              <input type="text" id="entity_abschaltung" value="${this._config.entity_abschaltung || ""}" placeholder="binary_sensor..." />
-            </div>
-            <div class="field">
-              <span class="field-label">Fehler</span>
-              <input type="text" id="entity_fehler" value="${this._config.entity_fehler || ""}" placeholder="binary_sensor..." />
-            </div>
-            <div class="field">
-              <span class="field-label">Abschalten (lock / switch)</span>
-              <input type="text" id="entity_abschalten" value="${this._config.entity_abschalten || ""}" placeholder="lock... / switch..." />
-            </div>
-          </div>
-        </div>
+          <div class="section-title">Binäre Entitäten (3 Stück)</div>
 
-        <!-- TEXTE -->
-        <div class="section">
-          <div class="section-title">Texte</div>
-          <div class="grid-3">
+          <div class="entity-block">
+            <div class="field-label" style="margin-bottom:8px;">Entität 1</div>
             <div class="field">
-              <span class="field-label">OK-Text</span>
-              <input type="text" id="text_ok" value="${this._config.text_ok || "OK"}" placeholder="OK" />
+              <span class="field-label">Entity</span>
+              <input type="text" id="ent0_entity" value="${e0.entity}" placeholder="binary_sensor..." />
             </div>
             <div class="field">
-              <span class="field-label">Fehler-Text</span>
-              <input type="text" id="text_fehler" value="${this._config.text_fehler || "Fehler aktiv"}" placeholder="Fehler aktiv" />
+              <span class="field-label">Meldung aktiv</span>
+              <input type="text" id="ent0_label_active" value="${e0.label_active}" />
             </div>
             <div class="field">
-              <span class="field-label">Abschaltung-Text</span>
-              <input type="text" id="text_abschaltung" value="${this._config.text_abschaltung || "Abgeschaltet"}" placeholder="Abgeschaltet" />
-            </div>
-          </div>
-        </div>
-
-        <!-- ICONS -->
-        <div class="section">
-          <div class="section-title">Icons</div>
-          <div class="grid-2">
-            <div class="field">
-              <span class="field-label">Haupt-Icon</span>
-              <select id="icon">${this._iconOptions(this._config.icon || "mdi:smoke-detector")}</select>
-              <div class="icon-preview" id="icon_preview"><ha-icon icon="${this._config.icon || "mdi:smoke-detector"}"></ha-icon> Vorschau</div>
+              <span class="field-label">Meldung inaktiv</span>
+              <input type="text" id="ent0_label_inactive" value="${e0.label_inactive}" />
             </div>
             <div class="field">
-              <span class="field-label">Fehler-Icon</span>
-              <select id="icon_fehler">${this._iconOptions(this._config.icon_fehler || "mdi:smoke-detector-alert")}</select>
-              <div class="icon-preview" id="icon_fehler_preview"><ha-icon icon="${this._config.icon_fehler || "mdi:smoke-detector-alert"}"></ha-icon> Vorschau</div>
-            </div>
-            <div class="field">
-              <span class="field-label">Abschaltung-Icon</span>
-              <select id="icon_abschaltung">${this._iconOptions(this._config.icon_abschaltung || "mdi:smoke-detector-off")}</select>
-              <div class="icon-preview" id="icon_abschaltung_preview"><ha-icon icon="${this._config.icon_abschaltung || "mdi:smoke-detector-off"}"></ha-icon> Vorschau</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- FARBEN -->
-        <div class="section">
-          <div class="section-title">Farben (optional)</div>
-          <div class="grid-3">
-            <div class="color-field">
-              <span class="color-label">OK</span>
+              <span class="field-label">Farbe aktiv</span>
               <div class="color-row">
-                <input type="color" id="color_ok_picker" value="${this._config.color_ok || "#27ae60"}" />
-                <input type="text" id="color_ok" value="${this._config.color_ok || "#27ae60"}" />
+                <input type="color" id="ent0_color_active_picker" value="${e0.color_active}" />
+                <input type="text" id="ent0_color_active" value="${e0.color_active}" />
               </div>
             </div>
-            <div class="color-field">
-              <span class="color-label">Fehler</span>
+            <div class="field">
+              <span class="field-label">Farbe inaktiv</span>
               <div class="color-row">
-                <input type="color" id="color_fehler_picker" value="${this._config.color_fehler || "#e74c3c"}" />
-                <input type="text" id="color_fehler" value="${this._config.color_fehler || "#e74c3c"}" />
+                <input type="color" id="ent0_color_inactive_picker" value="${e0.color_inactive}" />
+                <input type="text" id="ent0_color_inactive" value="${e0.color_inactive}" />
               </div>
             </div>
-            <div class="color-field">
-              <span class="color-label">Abschaltung</span>
+          </div>
+
+          <div class="entity-block">
+            <div class="field-label" style="margin-bottom:8px;">Entität 2</div>
+            <div class="field">
+              <span class="field-label">Entity</span>
+              <input type="text" id="ent1_entity" value="${e1.entity}" placeholder="binary_sensor..." />
+            </div>
+            <div class="field">
+              <span class="field-label">Meldung aktiv</span>
+              <input type="text" id="ent1_label_active" value="${e1.label_active}" />
+            </div>
+            <div class="field">
+              <span class="field-label">Meldung inaktiv</span>
+              <input type="text" id="ent1_label_inactive" value="${e1.label_inactive}" />
+            </div>
+            <div class="field">
+              <span class="field-label">Farbe aktiv</span>
               <div class="color-row">
-                <input type="color" id="color_abschaltung_picker" value="${this._config.color_abschaltung || "#f39c12"}" />
-                <input type="text" id="color_abschaltung" value="${this._config.color_abschaltung || "#f39c12"}" />
+                <input type="color" id="ent1_color_active_picker" value="${e1.color_active}" />
+                <input type="text" id="ent1_color_active" value="${e1.color_active}" />
               </div>
             </div>
+            <div class="field">
+              <span class="field-label">Farbe inaktiv</span>
+              <div class="color-row">
+                <input type="color" id="ent1_color_inactive_picker" value="${e1.color_inactive}" />
+                <input type="text" id="ent1_color_inactive" value="${e1.color_inactive}" />
+              </div>
+            </div>
+          </div>
+
+          <div class="entity-block">
+            <div class="field-label" style="margin-bottom:8px;">Entität 3</div>
+            <div class="field">
+              <span class="field-label">Entity</span>
+              <input type="text" id="ent2_entity" value="${e2.entity}" placeholder="binary_sensor..." />
+            </div>
+            <div class="field">
+              <span class="field-label">Meldung aktiv</span>
+              <input type="text" id="ent2_label_active" value="${e2.label_active}" />
+            </div>
+            <div class="field">
+              <span class="field-label">Meldung inaktiv</span>
+              <input type="text" id="ent2_label_inactive" value="${e2.label_inactive}" />
+            </div>
+            <div class="field">
+              <span class="field-label">Farbe aktiv</span>
+              <div class="color-row">
+                <input type="color" id="ent2_color_active_picker" value="${e2.color_active}" />
+                <input type="text" id="ent2_color_active" value="${e2.color_active}" />
+              </div>
+            </div>
+            <div class="field">
+              <span class="field-label">Farbe inaktiv</span>
+              <div class="color-row">
+                <input type="color" id="ent2_color_inactive_picker" value="${e2.color_inactive}" />
+                <input type="text" id="ent2_color_inactive" value="${e2.color_inactive}" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Unten: Schalter zum Ausschalten</div>
+          <div class="field">
+            <span class="field-label">Entity (lock oder switch)</span>
+            <input type="text" id="entity_abschalten" value="${c.entity_abschalten || ""}" placeholder="lock... / switch..." />
           </div>
         </div>
       </div>
     `;
 
-    const textFields = [
-      "title", "entity_abschaltung", "entity_fehler", "entity_abschalten",
-      "text_ok", "text_fehler", "text_abschaltung"
-    ];
-
-    textFields.forEach((key) => {
-      const input = this.shadowRoot.getElementById(key);
-      if (input) {
-        input.addEventListener("change", (e) => {
-          this._config = { ...this._config, [key]: e.target.value };
-          this._fireChanged();
-        });
-        input.addEventListener("input", (e) => {
+    const bind = (id, key, subKey) => {
+      const el = this.shadowRoot.getElementById(id);
+      if (!el) return;
+      el.addEventListener("change", () => {
+        if (subKey) {
+          const m = id.match(/ent(\d)_/);
+          const i = m ? parseInt(m[1], 10) : 0;
+          if (!this._config.entities[i]) this._config.entities[i] = defaultEntity(i);
+          this._config.entities[i][subKey] = el.value;
+        } else if (key) {
+          this._config[key] = el.value;
+        }
+        this._fire();
+      });
+      el.addEventListener("input", (e) => {
+        if (subKey) {
+          const m = id.match(/ent(\d)_/);
+          const i = m ? parseInt(m[1], 10) : 0;
+          if (!this._config.entities[i]) this._config.entities[i] = defaultEntity(i);
+          this._config.entities[i][subKey] = e.target.value;
+        } else if (key) {
           this._config[key] = e.target.value;
-        });
-      }
-    });
+        }
+      });
+    };
 
-    ["icon", "icon_fehler", "icon_abschaltung"].forEach((key) => {
-      const select = this.shadowRoot.getElementById(key);
-      if (select) {
-        select.addEventListener("change", (e) => {
-          this._config = { ...this._config, [key]: e.target.value };
-          this._fireChanged();
-          this._updateIconPreview(key);
-        });
-      }
-    });
+    bind("title", "title");
+    bind("icon", "icon");
+    bind("entity_abschalten", "entity_abschalten");
 
-    ["color_ok", "color_fehler", "color_abschaltung"].forEach((key) => {
-      const picker = this.shadowRoot.getElementById(key + "_picker");
-      const text = this.shadowRoot.getElementById(key);
+    [0, 1, 2].forEach((i) => {
+      bind("ent" + i + "_entity", null, "entity");
+      bind("ent" + i + "_label_active", null, "label_active");
+      bind("ent" + i + "_label_inactive", null, "label_inactive");
+      bind("ent" + i + "_color_active", null, "color_active");
+      bind("ent" + i + "_color_inactive", null, "color_inactive");
 
-      if (picker) {
-        picker.addEventListener("input", (e) => {
-          this._config = { ...this._config, [key]: e.target.value };
-          if (text) text.value = e.target.value;
-          this._fireChanged();
-        });
-      }
-      if (text) {
-        text.addEventListener("change", (e) => {
-          this._config = { ...this._config, [key]: e.target.value };
-          if (picker && e.target.value.match(/^#[0-9a-fA-F]{6}$/)) {
-            picker.value = e.target.value;
-          }
-          this._fireChanged();
-        });
-        text.addEventListener("input", (e) => {
-          this._config[key] = e.target.value;
-          if (picker && e.target.value.match(/^#[0-9a-fA-F]{6}$/)) {
-            picker.value = e.target.value;
-          }
-        });
-      }
+      const pickerActive = this.shadowRoot.getElementById("ent" + i + "_color_active_picker");
+      const textActive = this.shadowRoot.getElementById("ent" + i + "_color_active");
+      if (pickerActive) pickerActive.addEventListener("input", (e) => { this._config.entities[i].color_active = e.target.value; if (textActive) textActive.value = e.target.value; this._fire(); });
+      if (textActive) textActive.addEventListener("change", (e) => { this._config.entities[i].color_active = e.target.value; if (pickerActive && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) pickerActive.value = e.target.value; this._fire(); });
+
+      const pickerInactive = this.shadowRoot.getElementById("ent" + i + "_color_inactive_picker");
+      const textInactive = this.shadowRoot.getElementById("ent" + i + "_color_inactive");
+      if (pickerInactive) pickerInactive.addEventListener("input", (e) => { this._config.entities[i].color_inactive = e.target.value; if (textInactive) textInactive.value = e.target.value; this._fire(); });
+      if (textInactive) textInactive.addEventListener("change", (e) => { this._config.entities[i].color_inactive = e.target.value; if (pickerInactive && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) pickerInactive.value = e.target.value; this._fire(); });
     });
   }
 }
 
-/* ── Registrierung ──────────────────────────────────────── */
 customElements.define("rauchmelder-card", RauchmelderCard);
 customElements.define("rauchmelder-card-editor", RauchmelderCardEditor);
 
@@ -735,6 +508,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "rauchmelder-card",
   name: "Rauchmelder Card",
-  description: "Kompakte Rauchmelder-Karte mit individuellen Icons, Farben und Texten (1-Bit KNX).",
+  description: "Rauchmelder mit Raumbezeichnung, 3 binären Entitäten (eigene Meldungen/Farben) und Ausschalt-Schalter.",
   preview: true,
 });
