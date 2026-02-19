@@ -144,6 +144,24 @@ class RauchmelderCard extends HTMLElement {
 
           .card {
             padding: 8px 10px;
+            display: flex;
+            gap: 12px;
+          }
+
+          .left,
+          .right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+          }
+
+          .left {
+            justify-content: space-between;
+          }
+
+          .right {
+            justify-content: center;
+            gap: 4px;
           }
 
           .header {
@@ -272,29 +290,26 @@ class RauchmelderCard extends HTMLElement {
         </style>
 
         <div class="card">
-          <div class="header">
-            <div class="icon">
-              <ha-icon icon="${c.icon}"></ha-icon>
+          <div class="left">
+            <div class="header">
+              <div class="icon">
+                <ha-icon icon="${c.icon}"></ha-icon>
+              </div>
+              <div class="title">${c.title}</div>
             </div>
-            <div class="title">${c.title}</div>
-          </div>
 
-          <div class="content-block">
-            <div class="icon">
-              <ha-icon icon="${c.icon}"></ha-icon>
-            </div>
-            <div class="text-rows">
-              ${rows.map((r) => `
-                <div class="text-row">
-                  <span class="label">${r.name}</span>
-                  <span class="value" style="color:${r.color}">${r.value}</span>
-                </div>
-              `).join("")}
+            <div class="toggle-row">
+              <div class="toggle-switch" id="btn-toggle"></div>
             </div>
           </div>
 
-          <div class="toggle-row">
-            <div class="toggle-switch" id="btn-toggle"></div>
+          <div class="right">
+            ${rows.map((r) => `
+              <div class="text-row">
+                <span class="label">${r.name}</span>
+                <span class="value" style="color:${r.color}">${r.value}</span>
+              </div>
+            `).join("")}
           </div>
         </div>
       </ha-card>
