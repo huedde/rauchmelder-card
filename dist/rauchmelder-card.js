@@ -139,7 +139,7 @@ class RauchmelderCard extends HTMLElement {
           }
 
           ha-card {
-            max-width: 200px;
+            display: inline-block;
           }
 
           .card {
@@ -349,11 +349,6 @@ class RauchmelderCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    if (this._rendered && this.shadowRoot) {
-      this.shadowRoot.querySelectorAll("ha-entity-picker").forEach((el) => {
-        el.hass = this._hass;
-      });
-    }
   }
 
   _fire() {
@@ -366,6 +361,7 @@ class RauchmelderCardEditor extends HTMLElement {
     const e0 = c.entities[0] || defaultEntity(0);
     const e1 = c.entities[1] || defaultEntity(1);
     const e2 = c.entities[2] || defaultEntity(2);
+    const entities = this._hass && this._hass.states ? Object.keys(this._hass.states) : [];
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -383,7 +379,7 @@ class RauchmelderCardEditor extends HTMLElement {
         .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
         .field:last-child { margin-bottom: 0; }
         .field-label { font-size: 12px; color: var(--secondary-text-color); }
-        .field input, .field select, .field ha-entity-picker {
+        .field input, .field select {
           width: 100%; padding: 10px 12px; border: 1px solid var(--divider-color);
           border-radius: 10px; font-size: 13px;
           background: var(--input-fill-color, #2a2a2a); color: var(--primary-text-color);
@@ -403,6 +399,10 @@ class RauchmelderCardEditor extends HTMLElement {
         .entity-block { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--divider-color); }
         .entity-block:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
       </style>
+
+      <datalist id="all_entities">
+        ${entities.map((id) => `<option value="${id}"></option>`).join("")}
+      </datalist>
 
       <div class="editor">
         <div class="section">
@@ -430,11 +430,7 @@ class RauchmelderCardEditor extends HTMLElement {
             </div>
             <div class="field">
               <span class="field-label">Entity</span>
-              <ha-entity-picker
-                id="ent0_entity"
-                value="${e0.entity}"
-                allow-custom-entity
-              ></ha-entity-picker>
+              <input type="text" id="ent0_entity" value="${e0.entity}" placeholder="binary_sensor..." list="all_entities" />
             </div>
             <div class="field">
               <span class="field-label">Meldung aktiv</span>
@@ -468,11 +464,7 @@ class RauchmelderCardEditor extends HTMLElement {
             </div>
             <div class="field">
               <span class="field-label">Entity</span>
-              <ha-entity-picker
-                id="ent1_entity"
-                value="${e1.entity}"
-                allow-custom-entity
-              ></ha-entity-picker>
+              <input type="text" id="ent1_entity" value="${e1.entity}" placeholder="binary_sensor..." list="all_entities" />
             </div>
             <div class="field">
               <span class="field-label">Meldung aktiv</span>
@@ -506,11 +498,7 @@ class RauchmelderCardEditor extends HTMLElement {
             </div>
             <div class="field">
               <span class="field-label">Entity</span>
-              <ha-entity-picker
-                id="ent2_entity"
-                value="${e2.entity}"
-                allow-custom-entity
-              ></ha-entity-picker>
+              <input type="text" id="ent2_entity" value="${e2.entity}" placeholder="binary_sensor..." list="all_entities" />
             </div>
             <div class="field">
               <span class="field-label">Meldung aktiv</span>
@@ -541,11 +529,7 @@ class RauchmelderCardEditor extends HTMLElement {
           <div class="section-title">Unten: Schalter zum Ausschalten</div>
           <div class="field">
             <span class="field-label">Entity (lock oder switch)</span>
-            <ha-entity-picker
-              id="entity_abschalten"
-              value="${c.entity_abschalten || ""}"
-              allow-custom-entity
-            ></ha-entity-picker>
+            <input type="text" id="entity_abschalten" value="${c.entity_abschalten || ""}" placeholder="lock... / switch..." list="all_entities" />
           </div>
         </div>
       </div>
@@ -577,35 +561,13 @@ class RauchmelderCardEditor extends HTMLElement {
       });
     };
 
-    const bindEntityPicker = (id, index, subKey) => {
-      const el = this.shadowRoot.getElementById(id);
-      if (!el) return;
-      if (this._hass) el.hass = this._hass;
-      el.addEventListener("value-changed", (e) => {
-        const value = (e.detail && e.detail.value) || "";
-        if (!this._config.entities[index]) this._config.entities[index] = defaultEntity(index);
-        this._config.entities[index][subKey] = value;
-        this._fire();
-      });
-    };
-
-    const bindEntityPickerConfig = (id, key) => {
-      const el = this.shadowRoot.getElementById(id);
-      if (!el) return;
-      if (this._hass) el.hass = this._hass;
-      el.addEventListener("value-changed", (e) => {
-        const value = (e.detail && e.detail.value) || "";
-        this._config[key] = value;
-        this._fire();
-      });
-    };
-
     bind("title", "title");
     bind("icon", "icon");
+    bind("entity_abschalten", "entity_abschalten");
 
     [0, 1, 2].forEach((i) => {
       bind("ent" + i + "_name", null, "name");
-      bindEntityPicker("ent" + i + "_entity", i, "entity");
+      bind("ent" + i + "_entity", null, "entity");
       bind("ent" + i + "_label_active", null, "label_active");
       bind("ent" + i + "_label_inactive", null, "label_inactive");
       bind("ent" + i + "_color_active", null, "color_active");
@@ -621,14 +583,6 @@ class RauchmelderCardEditor extends HTMLElement {
       if (pickerInactive) pickerInactive.addEventListener("input", (e) => { this._config.entities[i].color_inactive = e.target.value; if (textInactive) textInactive.value = e.target.value; this._fire(); });
       if (textInactive) textInactive.addEventListener("change", (e) => { this._config.entities[i].color_inactive = e.target.value; if (pickerInactive && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) pickerInactive.value = e.target.value; this._fire(); });
     });
-
-    bindEntityPickerConfig("entity_abschalten", "entity_abschalten");
-
-    if (this._hass) {
-      this.shadowRoot.querySelectorAll("ha-entity-picker").forEach((el) => {
-        el.hass = this._hass;
-      });
-    }
   }
 }
 
