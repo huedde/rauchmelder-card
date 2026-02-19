@@ -79,7 +79,7 @@ class RauchmelderCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 4;
+    return 2;
   }
 
   _getState(entityId) {
@@ -137,20 +137,24 @@ class RauchmelderCard extends HTMLElement {
             --text-secondary: var(--secondary-text-color, #aaa);
           }
 
+          ha-card {
+            max-width: 200px;
+          }
+
           .card {
-            padding: 12px 16px;
+            padding: 8px 10px;
           }
 
           .header {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 8px;
+            margin-bottom: 8px;
           }
 
           .header .icon {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -161,26 +165,29 @@ class RauchmelderCard extends HTMLElement {
           }
 
           .header .icon ha-icon {
-            --mdc-icon-size: 24px;
+            --mdc-icon-size: 20px;
           }
 
           .header .title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
           .binary-rows {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            margin-bottom: 12px;
+            gap: 4px;
+            margin-bottom: 8px;
           }
 
           .binary-row {
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 13px;
+            padding: 5px 8px;
+            border-radius: 8px;
+            font-size: 11px;
             font-weight: 500;
             border: 1px solid rgba(255,255,255,0.1);
           }
@@ -188,14 +195,14 @@ class RauchmelderCard extends HTMLElement {
           .toggle-row {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            margin-top: 4px;
+            justify-content: flex-start;
+            margin-top: 2px;
           }
 
           .toggle-switch {
-            width: 44px;
-            height: 24px;
-            border-radius: 12px;
+            width: 36px;
+            height: 20px;
+            border-radius: 10px;
             background: ${abschaltenOn ? "#e74c3c" : "#555"};
             position: relative;
             cursor: pointer;
@@ -215,9 +222,9 @@ class RauchmelderCard extends HTMLElement {
             content: '';
             position: absolute;
             top: 2px;
-            left: ${abschaltenOn ? "22px" : "2px"};
-            width: 20px;
-            height: 20px;
+            left: ${abschaltenOn ? "18px" : "2px"};
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: white;
             box-shadow: 0 1px 3px rgba(0,0,0,0.3);
