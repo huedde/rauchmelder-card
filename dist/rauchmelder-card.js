@@ -27,6 +27,7 @@ const ICON_OPTIONS = [
 function defaultEntity(i) {
   return {
     entity: "",
+    name: i === 0 ? "Abschaltung" : i === 1 ? "Fehler" : "Sperre",
     label_active: i === 0 ? "Abgeschaltet" : i === 1 ? "Fehler" : "Wartung",
     label_inactive: i === 0 ? "Aktiv" : i === 1 ? "OK" : "OK",
     color_active: i === 0 ? "#f39c12" : i === 1 ? "#e74c3c" : "#e67e22",
@@ -63,6 +64,7 @@ class RauchmelderCard extends HTMLElement {
       entities: Array.isArray(config.entities) && config.entities.length >= 3
         ? config.entities.map((e, i) => ({
             entity: e.entity || "",
+            name: e.name || defaultEntity(i).name,
             label_active: e.label_active || defaultEntity(i).label_active,
             label_inactive: e.label_inactive || defaultEntity(i).label_inactive,
             color_active: e.color_active || defaultEntity(i).color_active,
@@ -118,13 +120,12 @@ class RauchmelderCard extends HTMLElement {
 
     const rows = c.entities.map((e, i) => {
       const active = e.entity ? this._isActive(e.entity) : false;
-      const label = active ? e.label_active : e.label_inactive;
+      const value = active ? e.label_active : e.label_inactive;
       const color = active ? e.color_active : e.color_inactive;
-      const bg = this._hexToRgba(color, 0.15);
       return {
-        label,
+        name: e.name || ("Entität " + (i + 1)),
+        value: e.entity ? value : "—",
         color,
-        bg,
         hasEntity: !!e.entity,
       };
     });
@@ -177,19 +178,57 @@ class RauchmelderCard extends HTMLElement {
             text-overflow: ellipsis;
           }
 
-          .binary-rows {
+          .content-block {
             display: flex;
-            flex-direction: column;
-            gap: 4px;
+            align-items: flex-start;
+            gap: 10px;
             margin-bottom: 8px;
           }
 
-          .binary-row {
-            padding: 5px 8px;
-            border-radius: 8px;
+          .content-block .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
+            flex-shrink: 0;
+          }
+
+          .content-block .icon ha-icon {
+            --mdc-icon-size: 18px;
+          }
+
+          .text-rows {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+          }
+
+          .text-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
             font-size: 11px;
+            padding: 2px 0;
+          }
+
+          .text-row .label {
+            color: var(--text-secondary, #aaa);
+            flex-shrink: 0;
+          }
+
+          .text-row .value {
             font-weight: 500;
-            border: 1px solid rgba(255,255,255,0.1);
+            text-align: right;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
           .toggle-row {
@@ -240,12 +279,18 @@ class RauchmelderCard extends HTMLElement {
             <div class="title">${c.title}</div>
           </div>
 
-          <div class="binary-rows">
-            ${rows.map((r) => `
-              <div class="binary-row" style="background:${r.bg};color:${r.color};border-color:${r.color}40;">
-                ${r.hasEntity ? r.label : "—"}
-              </div>
-            `).join("")}
+          <div class="content-block">
+            <div class="icon">
+              <ha-icon icon="${c.icon}"></ha-icon>
+            </div>
+            <div class="text-rows">
+              ${rows.map((r) => `
+                <div class="text-row">
+                  <span class="label">${r.name}</span>
+                  <span class="value" style="color:${r.color}">${r.value}</span>
+                </div>
+              `).join("")}
+            </div>
           </div>
 
           <div class="toggle-row">
@@ -360,6 +405,10 @@ class RauchmelderCardEditor extends HTMLElement {
           <div class="entity-block">
             <div class="field-label" style="margin-bottom:8px;">Entität 1</div>
             <div class="field">
+              <span class="field-label">Bezeichnung (links)</span>
+              <input type="text" id="ent0_name" value="${e0.name || "Abschaltung"}" placeholder="Abschaltung" />
+            </div>
+            <div class="field">
               <span class="field-label">Entity</span>
               <input type="text" id="ent0_entity" value="${e0.entity}" placeholder="binary_sensor..." />
             </div>
@@ -390,6 +439,10 @@ class RauchmelderCardEditor extends HTMLElement {
           <div class="entity-block">
             <div class="field-label" style="margin-bottom:8px;">Entität 2</div>
             <div class="field">
+              <span class="field-label">Bezeichnung (links)</span>
+              <input type="text" id="ent1_name" value="${e1.name || "Fehler"}" placeholder="Fehler" />
+            </div>
+            <div class="field">
               <span class="field-label">Entity</span>
               <input type="text" id="ent1_entity" value="${e1.entity}" placeholder="binary_sensor..." />
             </div>
@@ -419,6 +472,10 @@ class RauchmelderCardEditor extends HTMLElement {
 
           <div class="entity-block">
             <div class="field-label" style="margin-bottom:8px;">Entität 3</div>
+            <div class="field">
+              <span class="field-label">Bezeichnung (links)</span>
+              <input type="text" id="ent2_name" value="${e2.name || "Sperre"}" placeholder="Sperre" />
+            </div>
             <div class="field">
               <span class="field-label">Entity</span>
               <input type="text" id="ent2_entity" value="${e2.entity}" placeholder="binary_sensor..." />
@@ -489,6 +546,7 @@ class RauchmelderCardEditor extends HTMLElement {
     bind("entity_abschalten", "entity_abschalten");
 
     [0, 1, 2].forEach((i) => {
+      bind("ent" + i + "_name", null, "name");
       bind("ent" + i + "_entity", null, "entity");
       bind("ent" + i + "_label_active", null, "label_active");
       bind("ent" + i + "_label_inactive", null, "label_inactive");
