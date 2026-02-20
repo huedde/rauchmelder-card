@@ -79,6 +79,7 @@ class RauchmelderCard extends HTMLElement {
       switch_color_off: "#555555",
       email_enabled: false,
       email_service: "",
+      invert_abschalt_output: false,
       entities: [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
   }
@@ -96,6 +97,7 @@ class RauchmelderCard extends HTMLElement {
       switch_color_off: config.switch_color_off || "#555555",
       email_enabled: !!config.email_enabled,
       email_service: config.email_service || "",
+      invert_abschalt_output: !!config.invert_abschalt_output,
       entities: Array.isArray(config.entities) && config.entities.length >= 3
         ? config.entities.map((e, i) => ({
             entity: e.entity || "",
@@ -133,12 +135,14 @@ class RauchmelderCard extends HTMLElement {
     return s === "on" || s === "locked";
   }
 
-  /** Schalter links = 0 (false), rechts = 1 (true). Service-Zuordnung umgepolt für Bus (lock/on = 0, unlock/off = 1). */
+  /** Schalter links = 0, rechts = 1. Bei invert_abschalt_output wird die Ausgabe getauscht. */
   _setAbschaltState(sendOne) {
-    const entityId = this._config.entity_abschalten;
+    const c = this._config;
+    const entityId = c.entity_abschalten;
     if (!this._hass || !entityId) return;
+    let one = !!sendOne;
+    if (c.invert_abschalt_output) one = !one;
     const domain = entityId.split(".")[0];
-    const one = !!sendOne;
     if (domain === "lock") {
       this._hass.callService("lock", one ? "unlock" : "lock", { entity_id: entityId });
     } else if (domain === "switch") {
@@ -809,6 +813,10 @@ class RauchmelderCardEditor extends HTMLElement {
             <span class="field-label">Entity (lock oder switch)</span>
             <input type="text" id="entity_abschalten" value="${c.entity_abschalten || ""}" placeholder="lock... / switch..." list="all_entities" />
           </div>
+          <div class="field" style="flex-direction: row; align-items: center; gap: 10px;">
+            <input type="checkbox" id="invert_abschalt_output" ${c.invert_abschalt_output ? "checked" : ""} />
+            <span class="field-label" style="margin: 0;">Ausgabe umgepolt (0/1 tauschen)</span>
+          </div>
           <div class="field">
             <span class="field-label">Farbe Schalter an (Abgeschaltet)</span>
             <div class="color-row">
@@ -878,6 +886,14 @@ class RauchmelderCardEditor extends HTMLElement {
 
     bind("entity_alarm", "entity_alarm");
     bind("entity_abschalten", "entity_abschalten");
+
+    const invertOutputEl = this.shadowRoot.getElementById("invert_abschalt_output");
+    if (invertOutputEl) {
+      invertOutputEl.addEventListener("change", () => {
+        this._config.invert_abschalt_output = invertOutputEl.checked;
+        this._fire();
+      });
+    }
 
     const emailEnabledEl = this.shadowRoot.getElementById("email_enabled");
     if (emailEnabledEl) {
