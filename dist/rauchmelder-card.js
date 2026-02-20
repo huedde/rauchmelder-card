@@ -53,6 +53,8 @@ class RauchmelderCard extends HTMLElement {
       icon: "mdi:smoke-detector-variant",
       entity_abschalten: "",
       entity_alarm: "",
+      alarm_color: "#e74c3c",
+      no_alarm_color: "#999999",
       entities: [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
   }
@@ -63,6 +65,8 @@ class RauchmelderCard extends HTMLElement {
       icon: config.icon || "mdi:smoke-detector-variant",
       entity_abschalten: config.entity_abschalten || "",
       entity_alarm: config.entity_alarm || "",
+      alarm_color: config.alarm_color || "#e74c3c",
+      no_alarm_color: config.no_alarm_color || "#999999",
       entities: Array.isArray(config.entities) && config.entities.length >= 3
         ? config.entities.map((e, i) => ({
             entity: e.entity || "",
@@ -209,8 +213,8 @@ class RauchmelderCard extends HTMLElement {
           }
 
           @keyframes alarm-blink {
-            0%, 49% { background: rgba(231, 76, 60, 0.7); color: #e74c3c; }
-            50%, 100% { background: rgba(100, 100, 100, 0.5); color: #999; }
+            0%, 49% { background: ${this._hexToRgba(c.alarm_color || "#e74c3c", 0.7)}; color: ${c.alarm_color || "#e74c3c"}; }
+            50%, 100% { background: ${this._hexToRgba(c.no_alarm_color || "#999", 0.5)}; color: ${c.no_alarm_color || "#999"}; }
           }
 
           .header .icon ha-icon {
@@ -459,6 +463,20 @@ class RauchmelderCardEditor extends HTMLElement {
             <span class="field-label">Alarm-Status (Entität, 1 = Alarm)</span>
             <input type="text" id="entity_alarm" value="${c.entity_alarm || ""}" placeholder="binary_sensor..." list="all_entities" />
           </div>
+          <div class="field">
+            <span class="field-label">Farbe Alarm</span>
+            <div class="color-row">
+              <input type="color" id="alarm_color_picker" value="${c.alarm_color || "#e74c3c"}" />
+              <input type="text" id="alarm_color" value="${c.alarm_color || "#e74c3c"}" />
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Farbe kein Alarm</span>
+            <div class="color-row">
+              <input type="color" id="no_alarm_color_picker" value="${c.no_alarm_color || "#999999"}" />
+              <input type="text" id="no_alarm_color" value="${c.no_alarm_color || "#999999"}" />
+            </div>
+          </div>
         </div>
 
         <div class="section">
@@ -607,6 +625,16 @@ class RauchmelderCardEditor extends HTMLElement {
     bind("icon", "icon");
     bind("entity_alarm", "entity_alarm");
     bind("entity_abschalten", "entity_abschalten");
+
+    const alarmColorPicker = this.shadowRoot.getElementById("alarm_color_picker");
+    const alarmColorText = this.shadowRoot.getElementById("alarm_color");
+    if (alarmColorPicker) alarmColorPicker.addEventListener("input", (e) => { this._config.alarm_color = e.target.value; if (alarmColorText) alarmColorText.value = e.target.value; this._fire(); });
+    if (alarmColorText) alarmColorText.addEventListener("change", (e) => { this._config.alarm_color = e.target.value; if (alarmColorPicker && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) alarmColorPicker.value = e.target.value; this._fire(); });
+
+    const noAlarmColorPicker = this.shadowRoot.getElementById("no_alarm_color_picker");
+    const noAlarmColorText = this.shadowRoot.getElementById("no_alarm_color");
+    if (noAlarmColorPicker) noAlarmColorPicker.addEventListener("input", (e) => { this._config.no_alarm_color = e.target.value; if (noAlarmColorText) noAlarmColorText.value = e.target.value; this._fire(); });
+    if (noAlarmColorText) noAlarmColorText.addEventListener("change", (e) => { this._config.no_alarm_color = e.target.value; if (noAlarmColorPicker && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) noAlarmColorPicker.value = e.target.value; this._fire(); });
 
     [0, 1, 2].forEach((i) => {
       bind("ent" + i + "_name", null, "name");
