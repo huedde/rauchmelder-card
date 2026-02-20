@@ -24,6 +24,22 @@ const ICON_OPTIONS = [
   { value: "mdi:bell", label: "Glocke" },
 ];
 
+const ENTITY_LEFT_OPTIONS = [
+  { value: "bezeichnung", label: "Bezeichnung" },
+  { value: "icon", label: "Icon" },
+];
+
+const ENTITY_ICON_OPTIONS = [
+  { value: "mdi:circle", label: "Kreis" },
+  { value: "mdi:circle-outline", label: "Kreis (Outline)" },
+  { value: "mdi:check-circle", label: "Haken" },
+  { value: "mdi:alert-circle", label: "Warnung" },
+  { value: "mdi:lock", label: "Schloss" },
+  { value: "mdi:lock-open", label: "Schloss offen" },
+  { value: "mdi:shield-check", label: "Schild OK" },
+  { value: "mdi:minus", label: "Strich" },
+];
+
 function defaultEntity(i) {
   return {
     entity: "",
@@ -32,6 +48,8 @@ function defaultEntity(i) {
     label_inactive: i === 0 ? "Aktiv" : i === 1 ? "OK" : "OK",
     color_active: i === 0 ? "#f39c12" : i === 1 ? "#e74c3c" : "#e67e22",
     color_inactive: "#27ae60",
+    display_left: "bezeichnung",
+    icon: "mdi:circle",
   };
 }
 
@@ -81,6 +99,8 @@ class RauchmelderCard extends HTMLElement {
             label_inactive: e.label_inactive || defaultEntity(i).label_inactive,
             color_active: e.color_active || defaultEntity(i).color_active,
             color_inactive: e.color_inactive || "#27ae60",
+            display_left: e.display_left || "bezeichnung",
+            icon: e.icon || "mdi:circle",
           }))
         : [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
@@ -149,6 +169,8 @@ class RauchmelderCard extends HTMLElement {
         value: e.entity ? value : "—",
         color,
         hasEntity: !!e.entity,
+        display_left: e.display_left || "bezeichnung",
+        icon: e.icon || "mdi:circle",
       };
     });
 
@@ -291,6 +313,16 @@ class RauchmelderCard extends HTMLElement {
             text-overflow: ellipsis;
           }
 
+          .text-row .row-icon {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+          }
+
+          .text-row .row-icon ha-icon {
+            --mdc-icon-size: 18px;
+          }
+
           .abschalt-datetime {
             font-size: 11px;
             line-height: 1.2;
@@ -358,7 +390,7 @@ class RauchmelderCard extends HTMLElement {
           <div class="right">
             ${rows.map((r) => `
               <div class="text-row">
-                <span class="label">${r.name}</span>
+                ${r.display_left === "icon" ? `<span class="row-icon" style="color:${r.color}"><ha-icon icon="${r.icon}"></ha-icon></span>` : `<span class="label">${r.name}</span>`}
                 <span class="value" style="color:${r.color}">${r.value}</span>
               </div>
             `).join("")}
@@ -502,8 +534,20 @@ class RauchmelderCardEditor extends HTMLElement {
           <div class="entity-block">
             <div class="field-label" style="margin-bottom:8px;">Entität 1</div>
             <div class="field">
+              <span class="field-label">Anzeige links</span>
+              <select id="ent0_display_left">
+                ${ENTITY_LEFT_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((e0.display_left || "bezeichnung") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
+              </select>
+            </div>
+            <div class="field">
               <span class="field-label">Bezeichnung (links)</span>
               <input type="text" id="ent0_name" value="${e0.name || "Abschaltung"}" placeholder="Abschaltung" />
+            </div>
+            <div class="field">
+              <span class="field-label">Icon (wenn Anzeige = Icon)</span>
+              <select id="ent0_icon">
+                ${ENTITY_ICON_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((e0.icon || "mdi:circle") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
+              </select>
             </div>
             <div class="field">
               <span class="field-label">Entity</span>
@@ -536,8 +580,20 @@ class RauchmelderCardEditor extends HTMLElement {
           <div class="entity-block">
             <div class="field-label" style="margin-bottom:8px;">Entität 2</div>
             <div class="field">
+              <span class="field-label">Anzeige links</span>
+              <select id="ent1_display_left">
+                ${ENTITY_LEFT_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((e1.display_left || "bezeichnung") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
+              </select>
+            </div>
+            <div class="field">
               <span class="field-label">Bezeichnung (links)</span>
               <input type="text" id="ent1_name" value="${e1.name || "Fehler"}" placeholder="Fehler" />
+            </div>
+            <div class="field">
+              <span class="field-label">Icon (wenn Anzeige = Icon)</span>
+              <select id="ent1_icon">
+                ${ENTITY_ICON_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((e1.icon || "mdi:circle") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
+              </select>
             </div>
             <div class="field">
               <span class="field-label">Entity</span>
@@ -570,8 +626,20 @@ class RauchmelderCardEditor extends HTMLElement {
           <div class="entity-block">
             <div class="field-label" style="margin-bottom:8px;">Entität 3</div>
             <div class="field">
+              <span class="field-label">Anzeige links</span>
+              <select id="ent2_display_left">
+                ${ENTITY_LEFT_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((e2.display_left || "bezeichnung") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
+              </select>
+            </div>
+            <div class="field">
               <span class="field-label">Bezeichnung (links)</span>
               <input type="text" id="ent2_name" value="${e2.name || "Sperre"}" placeholder="Sperre" />
+            </div>
+            <div class="field">
+              <span class="field-label">Icon (wenn Anzeige = Icon)</span>
+              <select id="ent2_icon">
+                ${ENTITY_ICON_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((e2.icon || "mdi:circle") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
+              </select>
             </div>
             <div class="field">
               <span class="field-label">Entity</span>
@@ -683,6 +751,8 @@ class RauchmelderCardEditor extends HTMLElement {
     if (noAlarmColorText) noAlarmColorText.addEventListener("change", (e) => { this._config.no_alarm_color = e.target.value; if (noAlarmColorPicker && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) noAlarmColorPicker.value = e.target.value; this._fire(); });
 
     [0, 1, 2].forEach((i) => {
+      bind("ent" + i + "_display_left", null, "display_left");
+      bind("ent" + i + "_icon", null, "icon");
       bind("ent" + i + "_name", null, "name");
       bind("ent" + i + "_entity", null, "entity");
       bind("ent" + i + "_label_active", null, "label_active");
