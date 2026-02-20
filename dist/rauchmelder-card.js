@@ -55,6 +55,7 @@ class RauchmelderCard extends HTMLElement {
       entity_alarm: "",
       alarm_color: "#e74c3c",
       no_alarm_color: "#999999",
+      icon_color: "#27ae60",
       entities: [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
   }
@@ -67,6 +68,7 @@ class RauchmelderCard extends HTMLElement {
       entity_alarm: config.entity_alarm || "",
       alarm_color: config.alarm_color || "#e74c3c",
       no_alarm_color: config.no_alarm_color || "#999999",
+      icon_color: config.icon_color || "#27ae60",
       entities: Array.isArray(config.entities) && config.entities.length >= 3
         ? config.entities.map((e, i) => ({
             entity: e.entity || "",
@@ -194,8 +196,8 @@ class RauchmelderCard extends HTMLElement {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(39, 174, 96, 0.2);
-            color: #27ae60;
+            background: ${this._hexToRgba(c.icon_color || "#27ae60", 0.2)};
+            color: ${c.icon_color || "#27ae60"};
             flex-shrink: 0;
           }
 
@@ -460,6 +462,13 @@ class RauchmelderCardEditor extends HTMLElement {
             </select>
           </div>
           <div class="field">
+            <span class="field-label">Farbe Icon (Normal)</span>
+            <div class="color-row">
+              <input type="color" id="icon_color_picker" value="${c.icon_color || "#27ae60"}" />
+              <input type="text" id="icon_color" value="${c.icon_color || "#27ae60"}" />
+            </div>
+          </div>
+          <div class="field">
             <span class="field-label">Alarm-Status (Entität, 1 = Alarm)</span>
             <input type="text" id="entity_alarm" value="${c.entity_alarm || ""}" placeholder="binary_sensor..." list="all_entities" />
           </div>
@@ -625,6 +634,11 @@ class RauchmelderCardEditor extends HTMLElement {
     bind("icon", "icon");
     bind("entity_alarm", "entity_alarm");
     bind("entity_abschalten", "entity_abschalten");
+
+    const iconColorPicker = this.shadowRoot.getElementById("icon_color_picker");
+    const iconColorText = this.shadowRoot.getElementById("icon_color");
+    if (iconColorPicker) iconColorPicker.addEventListener("input", (e) => { this._config.icon_color = e.target.value; if (iconColorText) iconColorText.value = e.target.value; this._fire(); });
+    if (iconColorText) iconColorText.addEventListener("change", (e) => { this._config.icon_color = e.target.value; if (iconColorPicker && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) iconColorPicker.value = e.target.value; this._fire(); });
 
     const alarmColorPicker = this.shadowRoot.getElementById("alarm_color_picker");
     const alarmColorText = this.shadowRoot.getElementById("alarm_color");
