@@ -56,6 +56,8 @@ class RauchmelderCard extends HTMLElement {
       alarm_color: "#e74c3c",
       no_alarm_color: "#999999",
       icon_color: "#27ae60",
+      switch_color_on: "#e74c3c",
+      switch_color_off: "#555555",
       entities: [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
   }
@@ -69,6 +71,8 @@ class RauchmelderCard extends HTMLElement {
       alarm_color: config.alarm_color || "#e74c3c",
       no_alarm_color: config.no_alarm_color || "#999999",
       icon_color: config.icon_color || "#27ae60",
+      switch_color_on: config.switch_color_on || "#e74c3c",
+      switch_color_off: config.switch_color_off || "#555555",
       entities: Array.isArray(config.entities) && config.entities.length >= 3
         ? config.entities.map((e, i) => ({
             entity: e.entity || "",
@@ -302,7 +306,7 @@ class RauchmelderCard extends HTMLElement {
             width: 36px;
             height: 20px;
             border-radius: 10px;
-            background: ${abschaltenOn ? "#e74c3c" : "#555"};
+            background: ${abschaltenOn ? (c.switch_color_on || "#e74c3c") : (c.switch_color_off || "#555")};
             position: relative;
             cursor: pointer;
             transition: background 0.2s ease;
@@ -600,6 +604,20 @@ class RauchmelderCardEditor extends HTMLElement {
             <span class="field-label">Entity (lock oder switch)</span>
             <input type="text" id="entity_abschalten" value="${c.entity_abschalten || ""}" placeholder="lock... / switch..." list="all_entities" />
           </div>
+          <div class="field">
+            <span class="field-label">Farbe Schalter an (Abgeschaltet)</span>
+            <div class="color-row">
+              <input type="color" id="switch_color_on_picker" value="${c.switch_color_on || "#e74c3c"}" />
+              <input type="text" id="switch_color_on" value="${c.switch_color_on || "#e74c3c"}" />
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Farbe Schalter aus (Aktiv)</span>
+            <div class="color-row">
+              <input type="color" id="switch_color_off_picker" value="${c.switch_color_off || "#555555"}" />
+              <input type="text" id="switch_color_off" value="${c.switch_color_off || "#555555"}" />
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -634,6 +652,16 @@ class RauchmelderCardEditor extends HTMLElement {
     bind("icon", "icon");
     bind("entity_alarm", "entity_alarm");
     bind("entity_abschalten", "entity_abschalten");
+
+    const switchColorOnPicker = this.shadowRoot.getElementById("switch_color_on_picker");
+    const switchColorOnText = this.shadowRoot.getElementById("switch_color_on");
+    if (switchColorOnPicker) switchColorOnPicker.addEventListener("input", (e) => { this._config.switch_color_on = e.target.value; if (switchColorOnText) switchColorOnText.value = e.target.value; this._fire(); });
+    if (switchColorOnText) switchColorOnText.addEventListener("change", (e) => { this._config.switch_color_on = e.target.value; if (switchColorOnPicker && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) switchColorOnPicker.value = e.target.value; this._fire(); });
+
+    const switchColorOffPicker = this.shadowRoot.getElementById("switch_color_off_picker");
+    const switchColorOffText = this.shadowRoot.getElementById("switch_color_off");
+    if (switchColorOffPicker) switchColorOffPicker.addEventListener("input", (e) => { this._config.switch_color_off = e.target.value; if (switchColorOffText) switchColorOffText.value = e.target.value; this._fire(); });
+    if (switchColorOffText) switchColorOffText.addEventListener("change", (e) => { this._config.switch_color_off = e.target.value; if (switchColorOffPicker && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) switchColorOffPicker.value = e.target.value; this._fire(); });
 
     const iconColorPicker = this.shadowRoot.getElementById("icon_color_picker");
     const iconColorText = this.shadowRoot.getElementById("icon_color");
