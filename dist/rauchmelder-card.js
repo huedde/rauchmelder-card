@@ -401,7 +401,10 @@ class RauchmelderCard extends HTMLElement {
 
     const btn = this.shadowRoot.getElementById("btn-toggle");
     if (btn && c.entity_abschalten) {
-      btn.addEventListener("click", () => this._toggleAbschalten());
+      btn.addEventListener("click", () => {
+        if (!abschaltenOn && !confirm("Rauchmelder wirklich abschalten?")) return;
+        this._toggleAbschalten();
+      });
     }
   }
 
