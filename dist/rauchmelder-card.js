@@ -52,6 +52,7 @@ class RauchmelderCard extends HTMLElement {
       title: "G0.03",
       icon: "mdi:smoke-detector-variant",
       entity_abschalten: "",
+      entity_alarm: "",
       entities: [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
   }
@@ -61,6 +62,7 @@ class RauchmelderCard extends HTMLElement {
       title: config.title || "Rauchmelder",
       icon: config.icon || "mdi:smoke-detector-variant",
       entity_abschalten: config.entity_abschalten || "",
+      entity_alarm: config.entity_alarm || "",
       entities: Array.isArray(config.entities) && config.entities.length >= 3
         ? config.entities.map((e, i) => ({
             entity: e.entity || "",
@@ -122,6 +124,11 @@ class RauchmelderCard extends HTMLElement {
     const abschaltDatetime = abschaltenOn && abschaltenState && abschaltenState.last_changed
       ? new Date(abschaltenState.last_changed).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })
       : "";
+
+    const alarmActive = c.entity_alarm ? this._isActive(c.entity_alarm) : false;
+    const abgeschaltetColor = (c.entities[0] && c.entities[0].color_active) || "#f39c12";
+    const iconClass = alarmActive ? "icon-alarm" : abschaltenOn ? "icon-abgeschaltet" : "";
+    const iconStyle = !alarmActive && abschaltenOn ? "background:" + this._hexToRgba(abgeschaltetColor, 0.2) + ";color:" + abgeschaltetColor : "";
 
     const rows = c.entities.map((e, i) => {
       const active = e.entity ? this._isActive(e.entity) : false;
@@ -186,6 +193,19 @@ class RauchmelderCard extends HTMLElement {
             background: rgba(39, 174, 96, 0.2);
             color: #27ae60;
             flex-shrink: 0;
+          }
+
+          .header .icon.icon-alarm {
+            animation: alarm-blink 1s ease-in-out infinite;
+          }
+
+          .header .icon.icon-abgeschaltet {
+            /* Farbe per inline-style aus Abschaltung */
+          }
+
+          @keyframes alarm-blink {
+            0%, 100% { background: rgba(231, 76, 60, 0.4); color: #e74c3c; }
+            50% { background: rgba(128, 128, 128, 0.3); color: #888; }
           }
 
           .header .icon ha-icon {
@@ -303,7 +323,7 @@ class RauchmelderCard extends HTMLElement {
         <div class="card">
           <div class="left">
             <div class="header">
-              <div class="icon">
+              <div class="icon ${iconClass}" ${iconStyle ? 'style="' + iconStyle + '"' : ""}>
                 <ha-icon icon="${c.icon}"></ha-icon>
               </div>
               <div class="title">${c.title}</div>
@@ -429,6 +449,10 @@ class RauchmelderCardEditor extends HTMLElement {
             <select id="icon">
               ${ICON_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((c.icon || "mdi:smoke-detector-variant") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
             </select>
+          </div>
+          <div class="field">
+            <span class="field-label">Alarm-Status (Entität, 1 = Alarm)</span>
+            <input type="text" id="entity_alarm" value="${c.entity_alarm || ""}" placeholder="binary_sensor..." list="all_entities" />
           </div>
         </div>
 
@@ -576,6 +600,7 @@ class RauchmelderCardEditor extends HTMLElement {
 
     bind("title", "title");
     bind("icon", "icon");
+    bind("entity_alarm", "entity_alarm");
     bind("entity_abschalten", "entity_abschalten");
 
     [0, 1, 2].forEach((i) => {
