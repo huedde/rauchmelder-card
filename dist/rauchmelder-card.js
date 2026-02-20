@@ -206,7 +206,7 @@ class RauchmelderCard extends HTMLElement {
           }
 
           .header .icon.icon-alarm {
-            animation: alarm-blink 2s ease-in-out infinite;
+            animation: alarm-blink 3s ease-in-out infinite;
           }
 
           .header .icon.icon-abgeschaltet {
@@ -219,7 +219,9 @@ class RauchmelderCard extends HTMLElement {
           }
 
           @keyframes alarm-blink {
-            0%, 49% { background: ${this._hexToRgba(c.alarm_color || "#e74c3c", 0.7)}; color: ${c.alarm_color || "#e74c3c"}; }
+            0% { background: ${this._hexToRgba(c.alarm_color || "#e74c3c", 0.7)}; color: ${c.alarm_color || "#e74c3c"}; }
+            16.67% { background: ${this._hexToRgba(c.no_alarm_color || "#999", 0.5)}; color: ${c.no_alarm_color || "#999"}; }
+            33.33% { background: ${this._hexToRgba(c.alarm_color || "#e74c3c", 0.7)}; color: ${c.alarm_color || "#e74c3c"}; }
             50%, 100% { background: ${this._hexToRgba(c.no_alarm_color || "#999", 0.5)}; color: ${c.no_alarm_color || "#999"}; }
           }
 
