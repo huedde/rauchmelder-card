@@ -116,7 +116,8 @@ class RauchmelderCard extends HTMLElement {
     if (!this.shadowRoot || !this._config) return;
 
     const c = this._config;
-    const abschaltenOn = c.entity_abschalten ? this._isActive(c.entity_abschalten) : false;
+    // Abschaltung = 1 (Schalter an), Inaktiv = 0 (Schalter aus) → Anzeige umgepolt
+    const abschaltenOn = c.entity_abschalten ? !this._isActive(c.entity_abschalten) : false;
     const abschaltenState = c.entity_abschalten ? this._getState(c.entity_abschalten) : null;
     const abschaltDatetime = abschaltenOn && abschaltenState && abschaltenState.last_changed
       ? new Date(abschaltenState.last_changed).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })
@@ -144,17 +145,20 @@ class RauchmelderCard extends HTMLElement {
 
           ha-card {
             display: inline-block;
+            width: fit-content;
+            max-width: 100%;
           }
 
           .card {
             padding: 8px 10px;
             display: flex;
             gap: 12px;
+            width: max-content;
           }
 
           .left,
           .right {
-            flex: 1;
+            flex: 0 1 auto;
             display: flex;
             flex-direction: column;
           }
