@@ -141,26 +141,21 @@ class RauchmelderCard extends HTMLElement {
           :host {
             --text-primary: var(--primary-text-color, #fff);
             --text-secondary: var(--secondary-text-color, #aaa);
-            display: inline-block;
-            width: fit-content;
           }
 
           ha-card {
-            display: inline-block;
-            width: fit-content;
-            max-width: 100%;
+            display: block;
           }
 
           .card {
             padding: 8px 10px;
             display: flex;
             gap: 12px;
-            width: max-content;
           }
 
           .left,
           .right {
-            flex: 0 1 auto;
+            flex: 1;
             display: flex;
             flex-direction: column;
           }
