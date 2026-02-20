@@ -59,6 +59,7 @@ class RauchmelderCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = {};
     this._hass = null;
+    this._confirmShown = false;
   }
 
   static getConfigElement() {
@@ -445,17 +446,6 @@ class RauchmelderCard extends HTMLElement {
           }
         </style>
 
-        <div id="confirm-overlay" class="confirm-overlay hidden">
-          <div class="confirm-dialog">
-            <div class="confirm-title">Bist du sicher?</div>
-            <div class="confirm-text">Rauchmelder wirklich abschalten?</div>
-            <div class="confirm-actions">
-              <button type="button" class="confirm-abbrechen" id="confirm-abbrechen">Abbrechen</button>
-              <button type="button" class="confirm-ok" id="confirm-ok">OK</button>
-            </div>
-          </div>
-        </div>
-
         <div class="card">
           <div class="left">
             <div class="header">
@@ -485,12 +475,37 @@ class RauchmelderCard extends HTMLElement {
     `;
 
     const btn = this.shadowRoot.getElementById("btn-toggle");
-    const overlay = this.shadowRoot.getElementById("confirm-overlay");
-    const btnAbbrechen = this.shadowRoot.getElementById("confirm-abbrechen");
-    const btnOk = this.shadowRoot.getElementById("confirm-ok");
 
     const hideConfirm = () => {
-      if (overlay) overlay.classList.add("hidden");
+      this._confirmShown = false;
+      const ov = this.shadowRoot.getElementById("confirm-overlay");
+      if (ov) ov.classList.add("hidden");
+    };
+
+    const ensureConfirmOverlay = () => {
+      let overlay = this.shadowRoot.getElementById("confirm-overlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "confirm-overlay";
+        overlay.className = "confirm-overlay hidden";
+        overlay.innerHTML = `
+          <div class="confirm-dialog">
+            <div class="confirm-title">Bist du sicher?</div>
+            <div class="confirm-text">Rauchmelder wirklich abschalten?</div>
+            <div class="confirm-actions">
+              <button type="button" class="confirm-abbrechen" id="confirm-abbrechen">Abbrechen</button>
+              <button type="button" class="confirm-ok" id="confirm-ok">OK</button>
+            </div>
+          </div>`;
+        this.shadowRoot.appendChild(overlay);
+
+        overlay.querySelector("#confirm-abbrechen").addEventListener("click", () => hideConfirm.call(this));
+        overlay.querySelector("#confirm-ok").addEventListener("click", () => {
+          hideConfirm.call(this);
+          this._toggleAbschalten();
+        });
+      }
+      overlay.classList.toggle("hidden", !this._confirmShown);
     };
 
     if (btn && c.entity_abschalten) {
@@ -499,17 +514,13 @@ class RauchmelderCard extends HTMLElement {
           this._toggleAbschalten();
           return;
         }
-        if (overlay) overlay.classList.remove("hidden");
+        this._confirmShown = true;
+        ensureConfirmOverlay();
+        this.shadowRoot.getElementById("confirm-overlay").classList.remove("hidden");
       });
     }
 
-    if (btnAbbrechen) btnAbbrechen.addEventListener("click", hideConfirm);
-    if (btnOk) {
-      btnOk.addEventListener("click", () => {
-        hideConfirm();
-        this._toggleAbschalten();
-      });
-    }
+    ensureConfirmOverlay();
   }
 
   _hexToRgba(hex, alpha) {
