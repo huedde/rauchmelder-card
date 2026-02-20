@@ -60,6 +60,20 @@ class RauchmelderCard extends HTMLElement {
     this._config = {};
     this._hass = null;
     this._confirmShown = false;
+    this.shadowRoot.addEventListener("click", (e) => {
+      const id = e.target.id;
+      if (id === "confirm-abbrechen") {
+        this._confirmShown = false;
+        const ov = this.shadowRoot.getElementById("confirm-overlay");
+        if (ov) ov.classList.add("hidden");
+      } else if (id === "confirm-ok") {
+        this._confirmShown = false;
+        const ov = this.shadowRoot.getElementById("confirm-overlay");
+        if (ov) ov.classList.add("hidden");
+        this._setAbschaltState(true);
+        this._sendAbschaltEmail();
+      }
+    });
   }
 
   static getConfigElement() {
@@ -515,13 +529,6 @@ class RauchmelderCard extends HTMLElement {
             </div>
           </div>`;
         this.shadowRoot.appendChild(overlay);
-
-        overlay.querySelector("#confirm-abbrechen").addEventListener("click", () => hideConfirm.call(this));
-        overlay.querySelector("#confirm-ok").addEventListener("click", () => {
-          hideConfirm.call(this);
-          this._setAbschaltState(true);
-          this._sendAbschaltEmail();
-        });
       }
       overlay.classList.toggle("hidden", !this._confirmShown);
     };
