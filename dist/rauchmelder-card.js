@@ -141,6 +141,8 @@ class RauchmelderCard extends HTMLElement {
           :host {
             --text-primary: var(--primary-text-color, #fff);
             --text-secondary: var(--secondary-text-color, #aaa);
+            display: inline-block;
+            width: fit-content;
           }
 
           ha-card {
