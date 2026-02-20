@@ -77,6 +77,8 @@ class RauchmelderCard extends HTMLElement {
       icon_color: "#27ae60",
       switch_color_on: "#e74c3c",
       switch_color_off: "#555555",
+      email_enabled: false,
+      email_service: "",
       entities: [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
   }
@@ -92,6 +94,8 @@ class RauchmelderCard extends HTMLElement {
       icon_color: config.icon_color || "#27ae60",
       switch_color_on: config.switch_color_on || "#e74c3c",
       switch_color_off: config.switch_color_off || "#555555",
+      email_enabled: !!config.email_enabled,
+      email_service: config.email_service || "",
       entities: Array.isArray(config.entities) && config.entities.length >= 3
         ? config.entities.map((e, i) => ({
             entity: e.entity || "",
@@ -143,6 +147,16 @@ class RauchmelderCard extends HTMLElement {
     } else {
       this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
     }
+  }
+
+  _sendAbschaltEmail() {
+    const c = this._config;
+    if (!this._hass || !c.email_enabled || !c.email_service) return;
+    const svc = c.email_service.replace(/^notify\./, "");
+    if (!svc) return;
+    const title = "Rauchmelder abgeschaltet";
+    const message = "Rauchmelder " + (c.title || "Rauchmelder") + " wurde abgeschaltet.";
+    this._hass.callService("notify", svc, { title: title, message: message });
   }
 
   _render() {
@@ -503,6 +517,7 @@ class RauchmelderCard extends HTMLElement {
         overlay.querySelector("#confirm-ok").addEventListener("click", () => {
           hideConfirm.call(this);
           this._toggleAbschalten();
+          this._sendAbschaltEmail();
         });
       }
       overlay.classList.toggle("hidden", !this._confirmShown);
@@ -569,6 +584,7 @@ class RauchmelderCardEditor extends HTMLElement {
     const e1 = c.entities[1] || defaultEntity(1);
     const e2 = c.entities[2] || defaultEntity(2);
     const entities = this._hass && this._hass.states ? Object.keys(this._hass.states) : [];
+    const notifyServices = this._hass && this._hass.services && this._hass.services.notify ? Object.keys(this._hass.services.notify) : [];
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -609,6 +625,9 @@ class RauchmelderCardEditor extends HTMLElement {
 
       <datalist id="all_entities">
         ${entities.map((id) => `<option value="${id}"></option>`).join("")}
+      </datalist>
+      <datalist id="notify_services">
+        ${notifyServices.map((s) => `<option value="notify.${s}"></option>`).join("")}
       </datalist>
 
       <div class="editor">
@@ -806,6 +825,18 @@ class RauchmelderCardEditor extends HTMLElement {
             </div>
           </div>
         </div>
+
+        <div class="section">
+          <div class="section-title">E-Mail bei Abschaltung</div>
+          <div class="field" style="flex-direction: row; align-items: center; gap: 10px;">
+            <input type="checkbox" id="email_enabled" ${c.email_enabled ? "checked" : ""} />
+            <span class="field-label" style="margin: 0;">E-Mail bei Abschaltung senden</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Notify-Service (z. B. notify.mail_open_door)</span>
+            <input type="text" id="email_service" value="${c.email_service || ""}" placeholder="notify.mail_open_door" list="notify_services" />
+          </div>
+        </div>
       </div>
     `;
 
@@ -848,6 +879,15 @@ class RauchmelderCardEditor extends HTMLElement {
 
     bind("entity_alarm", "entity_alarm");
     bind("entity_abschalten", "entity_abschalten");
+
+    const emailEnabledEl = this.shadowRoot.getElementById("email_enabled");
+    if (emailEnabledEl) {
+      emailEnabledEl.addEventListener("change", () => {
+        this._config.email_enabled = emailEnabledEl.checked;
+        this._fire();
+      });
+    }
+    bind("email_service", "email_service");
 
     const switchColorOnPicker = this.shadowRoot.getElementById("switch_color_on_picker");
     const switchColorOnText = this.shadowRoot.getElementById("switch_color_on");
