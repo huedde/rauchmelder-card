@@ -136,9 +136,9 @@ class RauchmelderCard extends HTMLElement {
       : "";
 
     const alarmActive = c.entity_alarm ? this._isActive(c.entity_alarm) : false;
-    const abgeschaltetColor = (c.entities[0] && c.entities[0].color_active) || "#f39c12";
+    const switchColorOn = c.switch_color_on || "#e74c3c";
     const iconClass = alarmActive ? "icon-alarm" : abschaltenOn ? "icon-abgeschaltet" : "";
-    const iconStyle = !alarmActive && abschaltenOn ? "background:" + this._hexToRgba(abgeschaltetColor, 0.2) + ";color:" + abgeschaltetColor : "";
+    const iconStyle = !alarmActive && abschaltenOn ? "background:" + this._hexToRgba(switchColorOn, 0.35) + ";color:" + switchColorOn : "";
 
     const rows = c.entities.map((e, i) => {
       const active = e.entity ? this._isActive(e.entity) : false;
@@ -210,8 +210,8 @@ class RauchmelderCard extends HTMLElement {
           }
 
           .header .icon.icon-abgeschaltet {
-            background: ${this._hexToRgba(abgeschaltetColor, 0.35)};
-            color: ${abgeschaltetColor};
+            background: ${this._hexToRgba(c.switch_color_on || "#e74c3c", 0.35)};
+            color: ${c.switch_color_on || "#e74c3c"};
           }
 
           .header .icon.icon-abgeschaltet ha-icon {
@@ -291,8 +291,10 @@ class RauchmelderCard extends HTMLElement {
 
           .abschalt-datetime {
             font-size: 11px;
+            line-height: 1.2;
+            min-height: 1.2em;
             color: var(--text-secondary, #aaa);
-            margin: 4px 0 8px 0;
+            margin: 2px 0 6px 0;
           }
 
           .toggle-row {
@@ -344,7 +346,7 @@ class RauchmelderCard extends HTMLElement {
               <div class="title">${c.title}</div>
             </div>
 
-            ${abschaltDatetime ? `<div class="abschalt-datetime">${abschaltDatetime}</div>` : ""}
+            <div class="abschalt-datetime">${abschaltDatetime || ""}</div>
 
             <div class="toggle-row">
               <div class="toggle-switch" id="btn-toggle"></div>
