@@ -196,16 +196,21 @@ class RauchmelderCard extends HTMLElement {
           }
 
           .header .icon.icon-alarm {
-            animation: alarm-blink 1s ease-in-out infinite;
+            animation: alarm-blink 2s ease-in-out infinite;
           }
 
           .header .icon.icon-abgeschaltet {
-            /* Farbe per inline-style aus Abschaltung */
+            background: ${this._hexToRgba(abgeschaltetColor, 0.35)};
+            color: ${abgeschaltetColor};
+          }
+
+          .header .icon.icon-abgeschaltet ha-icon {
+            color: inherit;
           }
 
           @keyframes alarm-blink {
-            0%, 100% { background: rgba(231, 76, 60, 0.4); color: #e74c3c; }
-            50% { background: rgba(128, 128, 128, 0.3); color: #888; }
+            0%, 49% { background: rgba(231, 76, 60, 0.7); color: #e74c3c; }
+            50%, 100% { background: rgba(100, 100, 100, 0.5); color: #999; }
           }
 
           .header .icon ha-icon {
