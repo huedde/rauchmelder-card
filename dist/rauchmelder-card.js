@@ -133,19 +133,17 @@ class RauchmelderCard extends HTMLElement {
     return s === "on" || s === "locked";
   }
 
-  _toggleAbschalten() {
+  /** Schalter links = 0 (Aktiv), rechts = 1 (Abgeschaltet). Setzt die Entität explizit. */
+  _setAbschaltState(sendOne) {
     const entityId = this._config.entity_abschalten;
     if (!this._hass || !entityId) return;
-    const state = this._getState(entityId);
-    if (!state) return;
     const domain = entityId.split(".")[0];
     if (domain === "lock") {
-      const service = state.state === "locked" ? "unlock" : "lock";
-      this._hass.callService("lock", service, { entity_id: entityId });
+      this._hass.callService("lock", sendOne ? "unlock" : "lock", { entity_id: entityId });
     } else if (domain === "switch") {
-      this._hass.callService("switch", "toggle", { entity_id: entityId });
+      this._hass.callService("switch", sendOne ? "turn_off" : "turn_on", { entity_id: entityId });
     } else {
-      this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
+      this._hass.callService("homeassistant", sendOne ? "turn_off" : "turn_on", { entity_id: entityId });
     }
   }
 
@@ -516,7 +514,7 @@ class RauchmelderCard extends HTMLElement {
         overlay.querySelector("#confirm-abbrechen").addEventListener("click", () => hideConfirm.call(this));
         overlay.querySelector("#confirm-ok").addEventListener("click", () => {
           hideConfirm.call(this);
-          this._toggleAbschalten();
+          this._setAbschaltState(true);
           this._sendAbschaltEmail();
         });
       }
@@ -526,7 +524,7 @@ class RauchmelderCard extends HTMLElement {
     if (btn && c.entity_abschalten) {
       btn.addEventListener("click", () => {
         if (abschaltenOn) {
-          this._toggleAbschalten();
+          this._setAbschaltState(false);
           return;
         }
         this._confirmShown = true;
