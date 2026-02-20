@@ -369,7 +369,92 @@ class RauchmelderCard extends HTMLElement {
             box-shadow: 0 1px 3px rgba(0,0,0,0.3);
             transition: left 0.2s ease;
           }
+
+          .confirm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+          }
+
+          .confirm-overlay.hidden {
+            display: none;
+          }
+
+          .confirm-dialog {
+            background: var(--card-background-color, #202124);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+          }
+
+          .confirm-dialog .confirm-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary-text-color, #fff);
+            margin: 0 0 12px 0;
+          }
+
+          .confirm-dialog .confirm-text {
+            font-size: 14px;
+            color: var(--primary-text-color, #fff);
+            margin: 0 0 24px 0;
+            opacity: 0.9;
+          }
+
+          .confirm-dialog .confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            align-items: center;
+          }
+
+          .confirm-dialog .confirm-abbrechen {
+            background: none;
+            border: none;
+            color: var(--primary-color, #03a9f4);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 8px 12px;
+          }
+
+          .confirm-dialog .confirm-abbrechen:hover {
+            opacity: 0.9;
+          }
+
+          .confirm-dialog .confirm-ok {
+            background: var(--primary-color, #03a9f4);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          }
+
+          .confirm-dialog .confirm-ok:hover {
+            opacity: 0.9;
+          }
         </style>
+
+        <div id="confirm-overlay" class="confirm-overlay hidden">
+          <div class="confirm-dialog">
+            <div class="confirm-title">Bist du sicher?</div>
+            <div class="confirm-text">Rauchmelder wirklich abschalten?</div>
+            <div class="confirm-actions">
+              <button type="button" class="confirm-abbrechen" id="confirm-abbrechen">Abbrechen</button>
+              <button type="button" class="confirm-ok" id="confirm-ok">OK</button>
+            </div>
+          </div>
+        </div>
 
         <div class="card">
           <div class="left">
@@ -400,9 +485,28 @@ class RauchmelderCard extends HTMLElement {
     `;
 
     const btn = this.shadowRoot.getElementById("btn-toggle");
+    const overlay = this.shadowRoot.getElementById("confirm-overlay");
+    const btnAbbrechen = this.shadowRoot.getElementById("confirm-abbrechen");
+    const btnOk = this.shadowRoot.getElementById("confirm-ok");
+
+    const hideConfirm = () => {
+      if (overlay) overlay.classList.add("hidden");
+    };
+
     if (btn && c.entity_abschalten) {
       btn.addEventListener("click", () => {
-        if (!abschaltenOn && !confirm("Rauchmelder wirklich abschalten?")) return;
+        if (abschaltenOn) {
+          this._toggleAbschalten();
+          return;
+        }
+        if (overlay) overlay.classList.remove("hidden");
+      });
+    }
+
+    if (btnAbbrechen) btnAbbrechen.addEventListener("click", hideConfirm);
+    if (btnOk) {
+      btnOk.addEventListener("click", () => {
+        hideConfirm();
         this._toggleAbschalten();
       });
     }
