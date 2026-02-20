@@ -117,6 +117,10 @@ class RauchmelderCard extends HTMLElement {
 
     const c = this._config;
     const abschaltenOn = c.entity_abschalten ? this._isActive(c.entity_abschalten) : false;
+    const abschaltenState = c.entity_abschalten ? this._getState(c.entity_abschalten) : null;
+    const abschaltDatetime = abschaltenOn && abschaltenState && abschaltenState.last_changed
+      ? new Date(abschaltenState.last_changed).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })
+      : "";
 
     const rows = c.entities.map((e, i) => {
       const active = e.entity ? this._isActive(e.entity) : false;
@@ -249,6 +253,12 @@ class RauchmelderCard extends HTMLElement {
             text-overflow: ellipsis;
           }
 
+          .abschalt-datetime {
+            font-size: 11px;
+            color: var(--text-secondary, #aaa);
+            margin: 4px 0 8px 0;
+          }
+
           .toggle-row {
             display: flex;
             align-items: center;
@@ -297,6 +307,8 @@ class RauchmelderCard extends HTMLElement {
               </div>
               <div class="title">${c.title}</div>
             </div>
+
+            ${abschaltDatetime ? `<div class="abschalt-datetime">${abschaltDatetime}</div>` : ""}
 
             <div class="toggle-row">
               <div class="toggle-switch" id="btn-toggle"></div>
