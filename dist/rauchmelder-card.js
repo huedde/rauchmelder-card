@@ -133,17 +133,18 @@ class RauchmelderCard extends HTMLElement {
     return s === "on" || s === "locked";
   }
 
-  /** Schalter links = 0 (false), rechts = 1 (true). Setzt die Entität explizit (umgepolt). */
+  /** Schalter links = 0 (false), rechts = 1 (true). Service-Zuordnung umgepolt für Bus (lock/on = 0, unlock/off = 1). */
   _setAbschaltState(sendOne) {
     const entityId = this._config.entity_abschalten;
     if (!this._hass || !entityId) return;
     const domain = entityId.split(".")[0];
+    const one = !!sendOne;
     if (domain === "lock") {
-      this._hass.callService("lock", sendOne ? "lock" : "unlock", { entity_id: entityId });
+      this._hass.callService("lock", one ? "unlock" : "lock", { entity_id: entityId });
     } else if (domain === "switch") {
-      this._hass.callService("switch", sendOne ? "turn_on" : "turn_off", { entity_id: entityId });
+      this._hass.callService("switch", one ? "turn_off" : "turn_on", { entity_id: entityId });
     } else {
-      this._hass.callService("homeassistant", sendOne ? "turn_on" : "turn_off", { entity_id: entityId });
+      this._hass.callService("homeassistant", one ? "turn_off" : "turn_on", { entity_id: entityId });
     }
   }
 
