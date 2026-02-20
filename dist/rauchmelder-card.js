@@ -433,6 +433,11 @@ class RauchmelderCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    if (this._rendered && this.shadowRoot) {
+      this.shadowRoot.querySelectorAll("ha-icon-picker").forEach((el) => {
+        el.hass = this._hass;
+      });
+    }
   }
 
   _fire() {
@@ -463,7 +468,7 @@ class RauchmelderCardEditor extends HTMLElement {
         .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
         .field:last-child { margin-bottom: 0; }
         .field-label { font-size: 12px; color: var(--secondary-text-color); }
-        .field input, .field select {
+        .field input, .field select, .field ha-icon-picker {
           width: 100%; padding: 10px 12px; border: 1px solid var(--divider-color);
           border-radius: 10px; font-size: 13px;
           background: var(--input-fill-color, #2a2a2a); color: var(--primary-text-color);
@@ -497,9 +502,7 @@ class RauchmelderCardEditor extends HTMLElement {
           </div>
           <div class="field">
             <span class="field-label">Rauchmelder-Icon</span>
-            <select id="icon">
-              ${ICON_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((c.icon || "mdi:smoke-detector-variant") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
-            </select>
+            <ha-icon-picker id="icon" value="${c.icon || "mdi:smoke-detector-variant"}"></ha-icon-picker>
           </div>
           <div class="field">
             <span class="field-label">Farbe Icon (Normal)</span>
@@ -545,9 +548,7 @@ class RauchmelderCardEditor extends HTMLElement {
             </div>
             <div class="field">
               <span class="field-label">Icon (wenn Anzeige = Icon)</span>
-              <select id="ent0_icon">
-                ${ENTITY_ICON_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((e0.icon || "mdi:circle") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
-              </select>
+              <ha-icon-picker id="ent0_icon" value="${e0.icon || "mdi:circle"}"></ha-icon-picker>
             </div>
             <div class="field">
               <span class="field-label">Entity</span>
@@ -591,9 +592,7 @@ class RauchmelderCardEditor extends HTMLElement {
             </div>
             <div class="field">
               <span class="field-label">Icon (wenn Anzeige = Icon)</span>
-              <select id="ent1_icon">
-                ${ENTITY_ICON_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((e1.icon || "mdi:circle") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
-              </select>
+              <ha-icon-picker id="ent1_icon" value="${e1.icon || "mdi:circle"}"></ha-icon-picker>
             </div>
             <div class="field">
               <span class="field-label">Entity</span>
@@ -637,9 +636,7 @@ class RauchmelderCardEditor extends HTMLElement {
             </div>
             <div class="field">
               <span class="field-label">Icon (wenn Anzeige = Icon)</span>
-              <select id="ent2_icon">
-                ${ENTITY_ICON_OPTIONS.map((o) => '<option value="' + o.value + '"' + ((e2.icon || "mdi:circle") === o.value ? " selected" : "") + ">" + o.label + "</option>").join("")}
-              </select>
+              <ha-icon-picker id="ent2_icon" value="${e2.icon || "mdi:circle"}"></ha-icon-picker>
             </div>
             <div class="field">
               <span class="field-label">Entity</span>
@@ -721,7 +718,16 @@ class RauchmelderCardEditor extends HTMLElement {
     };
 
     bind("title", "title");
-    bind("icon", "icon");
+
+    const mainIconPicker = this.shadowRoot.getElementById("icon");
+    if (mainIconPicker) {
+      if (this._hass) mainIconPicker.hass = this._hass;
+      mainIconPicker.addEventListener("value-changed", (e) => {
+        this._config.icon = (e.detail && e.detail.value) || "";
+        this._fire();
+      });
+    }
+
     bind("entity_alarm", "entity_alarm");
     bind("entity_abschalten", "entity_abschalten");
 
@@ -752,7 +758,17 @@ class RauchmelderCardEditor extends HTMLElement {
 
     [0, 1, 2].forEach((i) => {
       bind("ent" + i + "_display_left", null, "display_left");
-      bind("ent" + i + "_icon", null, "icon");
+
+      const iconPicker = this.shadowRoot.getElementById("ent" + i + "_icon");
+      if (iconPicker) {
+        if (this._hass) iconPicker.hass = this._hass;
+        iconPicker.addEventListener("value-changed", (e) => {
+          if (!this._config.entities[i]) this._config.entities[i] = defaultEntity(i);
+          this._config.entities[i].icon = (e.detail && e.detail.value) || "mdi:circle";
+          this._fire();
+        });
+      }
+
       bind("ent" + i + "_name", null, "name");
       bind("ent" + i + "_entity", null, "entity");
       bind("ent" + i + "_label_active", null, "label_active");
@@ -770,6 +786,12 @@ class RauchmelderCardEditor extends HTMLElement {
       if (pickerInactive) pickerInactive.addEventListener("input", (e) => { this._config.entities[i].color_inactive = e.target.value; if (textInactive) textInactive.value = e.target.value; this._fire(); });
       if (textInactive) textInactive.addEventListener("change", (e) => { this._config.entities[i].color_inactive = e.target.value; if (pickerInactive && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) pickerInactive.value = e.target.value; this._fire(); });
     });
+
+    if (this._hass) {
+      this.shadowRoot.querySelectorAll("ha-icon-picker").forEach((el) => {
+        el.hass = this._hass;
+      });
+    }
   }
 }
 
