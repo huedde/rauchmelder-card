@@ -7,6 +7,8 @@
 
 const CARD_VERSION = "2.0.0";
 
+const LAST_STATE_KEY = "rauchmelder_card_last_state";
+
 console.info(
   `%c RAUCHMELDER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #e74c3c; font-weight: bold; padding: 2px 6px; border-radius: 4px 0 0 4px;",
@@ -142,11 +144,45 @@ class RauchmelderCard extends HTMLElement {
     return this._hass.states[entityId];
   }
 
+  _hasValidState(entityId) {
+    const state = this._getState(entityId);
+    if (!state || !state.state) return false;
+    const s = String(state.state).toLowerCase();
+    return s !== "unknown" && s !== "unavailable";
+  }
+
   _isActive(entityId) {
     const state = this._getState(entityId);
     if (!state) return false;
     const s = state.state;
     return s === "on" || s === "locked";
+  }
+
+  _getLastStates() {
+    try {
+      const raw = localStorage.getItem(LAST_STATE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  _setLastState(entityId, stateValue, lastChanged) {
+    if (!entityId) return;
+    try {
+      const o = this._getLastStates();
+      o[entityId] = { state: stateValue, last_changed: lastChanged || null };
+      localStorage.setItem(LAST_STATE_KEY, JSON.stringify(o));
+    } catch (_) {}
+  }
+
+  _getLastState(entityId) {
+    const o = this._getLastStates();
+    return o[entityId] || null;
+  }
+
+  _isActiveFromState(stateValue) {
+    return stateValue === "on" || stateValue === "locked";
   }
 
   /** Schalter links = 0, rechts = 1. Bei invert_abschalt_output wird die Ausgabe getauscht. */
@@ -180,27 +216,63 @@ class RauchmelderCard extends HTMLElement {
     if (!this.shadowRoot || !this._config) return;
 
     const c = this._config;
-    // Abschaltung = 1 (Schalter an), Inaktiv = 0 (Schalter aus) → Anzeige umgepolt
-    const abschaltenOn = c.entity_abschalten ? !this._isActive(c.entity_abschalten) : false;
-    const abschaltenState = c.entity_abschalten ? this._getState(c.entity_abschalten) : null;
-    const abschaltDatetime = abschaltenOn && abschaltenState && abschaltenState.last_changed
-      ? new Date(abschaltenState.last_changed).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })
+    const entityAbschalten = c.entity_abschalten || "";
+
+    if (entityAbschalten) {
+      const state = this._getState(entityAbschalten);
+      if (this._hasValidState(entityAbschalten) && state) {
+        this._setLastState(entityAbschalten, state.state, state.last_changed);
+      }
+    }
+
+    const lastAbschalt = entityAbschalten ? this._getLastState(entityAbschalten) : null;
+    const hasValidAbschalt = entityAbschalten && this._hasValidState(entityAbschalten);
+    const abschaltenOn = hasValidAbschalt
+      ? !this._isActive(entityAbschalten)
+      : lastAbschalt
+        ? !this._isActiveFromState(lastAbschalt.state)
+        : false;
+
+    const abschaltenState = entityAbschalten ? this._getState(entityAbschalten) : null;
+    const abschaltDatetime = abschaltenOn && (abschaltenState?.last_changed || lastAbschalt?.last_changed)
+      ? new Date((abschaltenState?.last_changed || lastAbschalt.last_changed)).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })
       : "";
 
-    const alarmActive = c.entity_alarm ? this._isActive(c.entity_alarm) : false;
+    const entityAlarm = c.entity_alarm || "";
+    if (entityAlarm) {
+      const state = this._getState(entityAlarm);
+      if (this._hasValidState(entityAlarm) && state) {
+        this._setLastState(entityAlarm, state.state, state.last_changed);
+      }
+    }
+    const lastAlarm = entityAlarm ? this._getLastState(entityAlarm) : null;
+    const alarmActive = entityAlarm
+      ? (this._hasValidState(entityAlarm) ? this._isActive(entityAlarm) : (lastAlarm ? this._isActiveFromState(lastAlarm.state) : false))
+      : false;
+
     const switchColorOn = c.switch_color_on || "#e74c3c";
     const iconClass = alarmActive ? "icon-alarm" : abschaltenOn ? "icon-abgeschaltet" : "";
     const iconStyle = !alarmActive && abschaltenOn ? "background:" + this._hexToRgba(switchColorOn, 0.35) + ";color:" + switchColorOn : "";
 
     const rows = c.entities.map((e, i) => {
-      const active = e.entity ? this._isActive(e.entity) : false;
+      const entityId = e.entity || "";
+      if (entityId) {
+        const state = this._getState(entityId);
+        if (this._hasValidState(entityId) && state) {
+          this._setLastState(entityId, state.state, state.last_changed);
+        }
+      }
+      const lastRow = entityId ? this._getLastState(entityId) : null;
+      const active = entityId
+        ? (this._hasValidState(entityId) ? this._isActive(entityId) : (lastRow ? this._isActiveFromState(lastRow.state) : false))
+        : false;
       const value = active ? e.label_active : e.label_inactive;
       const color = active ? e.color_active : e.color_inactive;
       return {
         name: e.name || ("Entität " + (i + 1)),
-        value: e.entity ? value : "—",
+        value: entityId ? value : "—",
         color,
-        hasEntity: !!e.entity,
+        hasEntity: !!entityId,
         display_left: e.display_left || "bezeichnung",
         icon: e.icon || "mdi:circle",
       };
