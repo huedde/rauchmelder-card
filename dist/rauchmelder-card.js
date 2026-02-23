@@ -185,7 +185,9 @@ class RauchmelderCard extends HTMLElement {
     return stateValue === "on" || stateValue === "locked";
   }
 
-  /** Schalter links = 0, rechts = 1. Bei invert_abschalt_output wird die Ausgabe getauscht. */
+  /** Standard: 0 = Aktiv (links), 1 = Gesperrt/Abgeschaltet (rechts).
+   *  sendOne=true = Abgeschaltet → lock/turn_on, sendOne=false = Aktiv → unlock/turn_off.
+   *  Bei invert_abschalt_output wird die gesendete Logik getauscht (für invertierte Busse). */
   _setAbschaltState(sendOne) {
     const c = this._config;
     const entityId = c.entity_abschalten;
@@ -194,11 +196,11 @@ class RauchmelderCard extends HTMLElement {
     if (c.invert_abschalt_output) one = !one;
     const domain = entityId.split(".")[0];
     if (domain === "lock") {
-      this._hass.callService("lock", one ? "unlock" : "lock", { entity_id: entityId });
+      this._hass.callService("lock", one ? "lock" : "unlock", { entity_id: entityId });
     } else if (domain === "switch") {
-      this._hass.callService("switch", one ? "turn_off" : "turn_on", { entity_id: entityId });
+      this._hass.callService("switch", one ? "turn_on" : "turn_off", { entity_id: entityId });
     } else {
-      this._hass.callService("homeassistant", one ? "turn_off" : "turn_on", { entity_id: entityId });
+      this._hass.callService("homeassistant", one ? "turn_on" : "turn_off", { entity_id: entityId });
     }
   }
 
@@ -227,10 +229,11 @@ class RauchmelderCard extends HTMLElement {
 
     const lastAbschalt = entityAbschalten ? this._getLastState(entityAbschalten) : null;
     const hasValidAbschalt = entityAbschalten && this._hasValidState(entityAbschalten);
+    // Standard: 0/off/unlocked = Aktiv (links), 1/on/locked = Abgeschaltet (rechts)
     const abschaltenOn = hasValidAbschalt
-      ? !this._isActive(entityAbschalten)
+      ? this._isActive(entityAbschalten)
       : lastAbschalt
-        ? !this._isActiveFromState(lastAbschalt.state)
+        ? this._isActiveFromState(lastAbschalt.state)
         : false;
 
     const abschaltenState = entityAbschalten ? this._getState(entityAbschalten) : null;
@@ -684,6 +687,7 @@ class RauchmelderCardEditor extends HTMLElement {
         .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
         .field:last-child { margin-bottom: 0; }
         .field-label { font-size: 12px; color: var(--secondary-text-color); }
+        .field-hint { font-size: 11px; color: var(--secondary-text-color); opacity: 0.85; }
         .field input, .field select, .field ha-icon-picker {
           width: 100%; padding: 10px 12px; border: 1px solid var(--divider-color);
           border-radius: 10px; font-size: 13px;
@@ -892,9 +896,12 @@ class RauchmelderCardEditor extends HTMLElement {
             <span class="field-label">Entity (lock oder switch)</span>
             <input type="text" id="entity_abschalten" value="${c.entity_abschalten || ""}" placeholder="lock... / switch..." list="all_entities" />
           </div>
-          <div class="field" style="flex-direction: row; align-items: center; gap: 10px;">
-            <input type="checkbox" id="invert_abschalt_output" ${c.invert_abschalt_output ? "checked" : ""} />
-            <span class="field-label" style="margin: 0;">Ausgabe umgepolt (0/1 tauschen)</span>
+          <div class="field">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+              <input type="checkbox" id="invert_abschalt_output" ${c.invert_abschalt_output ? "checked" : ""} />
+              <span class="field-label" style="margin: 0;">Ausgabe umgepolt</span>
+            </div>
+            <span class="field-hint">(nur bei invertiertem Bus; Standard: 0=Aktiv, 1=Gesperrt)</span>
           </div>
           <div class="field">
             <span class="field-label">Farbe Schalter an (Abgeschaltet)</span>
