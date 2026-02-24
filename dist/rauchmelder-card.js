@@ -550,6 +550,33 @@ class RauchmelderCard extends HTMLElement {
           .confirm-dialog .confirm-ok:hover {
             opacity: 0.9;
           }
+
+          /* Mobile-Optimierung: Texte sollen auf dem Handy nicht verschwinden */
+          @media (max-width: 600px) {
+            .card {
+              flex-direction: column;
+              gap: 8px;
+            }
+
+            .left,
+            .right {
+              width: 100%;
+            }
+
+            .header .title {
+              font-size: 13px;
+              white-space: normal;
+            }
+
+            .text-row {
+              font-size: 12px;
+            }
+
+            .text-row .value {
+              text-align: left;
+              max-width: 100%;
+            }
+          }
         </style>
 
         <div class="card">
