@@ -570,11 +570,21 @@ class RauchmelderCard extends HTMLElement {
 
             .text-row {
               font-size: 12px;
+              flex-direction: column;
+              align-items: flex-start;
+              justify-content: flex-start;
+            }
+
+            .text-row .label {
+              white-space: normal;
             }
 
             .text-row .value {
               text-align: left;
               max-width: 100%;
+              white-space: normal;
+              overflow: visible;
+              text-overflow: clip;
             }
           }
         </style>
