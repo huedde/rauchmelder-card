@@ -66,6 +66,7 @@ class RauchmelderCard extends HTMLElement {
     this._batteryConfirmShown = false;
     this._pendingBatteryStorageKey = "";
     this._batteryDraftDateTime = "";
+    this._lastRenderSignature = "";
     this.shadowRoot.addEventListener("click", (e) => {
       const id = e.target.id;
       if (id === "confirm-abbrechen") {
@@ -165,6 +166,7 @@ class RauchmelderCard extends HTMLElement {
           }))
         : [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
+    this._lastRenderSignature = "";
     this._render();
   }
 
@@ -172,6 +174,9 @@ class RauchmelderCard extends HTMLElement {
     this._hass = hass;
     // Verhindert, dass ein laufender Datumseintrag durch häufige HA-Updates überschrieben wird.
     if (this._batteryConfirmShown) return;
+    const sig = this._getRenderSignature();
+    if (sig === this._lastRenderSignature) return;
+    this._lastRenderSignature = sig;
     this._render();
   }
 
@@ -269,6 +274,27 @@ class RauchmelderCard extends HTMLElement {
     } catch (_) {
       return "";
     }
+  }
+
+  _getRenderSignature() {
+    const c = this._config || {};
+    const ids = [];
+    if (c.entity_abschalten) ids.push(c.entity_abschalten);
+    if (c.entity_alarm) ids.push(c.entity_alarm);
+    if (Array.isArray(c.entities)) {
+      c.entities.forEach((e) => {
+        if (e && e.entity) ids.push(e.entity);
+      });
+    }
+    const uniqueIds = [...new Set(ids)];
+    const parts = uniqueIds.map((id) => {
+      const st = this._getState(id);
+      if (!st) return id + ":null";
+      return id + ":" + String(st.state) + ":" + String(st.last_changed || "");
+    });
+    parts.push("confirm:" + (this._confirmShown ? "1" : "0"));
+    parts.push("bconfirm:" + (this._batteryConfirmShown ? "1" : "0"));
+    return parts.join("|");
   }
 
   _toDateTimeLocalValue(dateValue) {
@@ -882,6 +908,7 @@ class RauchmelderCard extends HTMLElement {
         this._batteryDraftDateTime = e.target.value || "";
       });
     }
+    this._lastRenderSignature = this._getRenderSignature();
   }
 
   _hexToRgba(hex, alpha) {
