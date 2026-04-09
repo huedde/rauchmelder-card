@@ -82,6 +82,9 @@ class RauchmelderCard extends HTMLElement {
         this._pendingBatteryStorageKey = "";
         const bov = this.shadowRoot.getElementById("battery-confirm-overlay");
         if (bov) bov.classList.add("hidden");
+      } else if (id === "battery-confirm-now") {
+        const input = this.shadowRoot.getElementById("battery-confirm-datetime");
+        if (input) input.value = this._toDateTimeLocalValue(new Date().toISOString());
       } else if (id === "battery-confirm-ok") {
         this._batteryConfirmShown = false;
         const key = this._pendingBatteryStorageKey;
@@ -89,7 +92,9 @@ class RauchmelderCard extends HTMLElement {
         const bov = this.shadowRoot.getElementById("battery-confirm-overlay");
         if (bov) bov.classList.add("hidden");
         if (key) {
-          this._setBatteryChangeDate(key, new Date().toISOString());
+          const input = this.shadowRoot.getElementById("battery-confirm-datetime");
+          const selected = input && input.value ? new Date(input.value).toISOString() : new Date().toISOString();
+          this._setBatteryChangeDate(key, selected);
           this._render();
         }
       }
@@ -249,6 +254,18 @@ class RauchmelderCard extends HTMLElement {
     } catch (_) {
       return "";
     }
+  }
+
+  _toDateTimeLocalValue(dateValue) {
+    const d = dateValue ? new Date(dateValue) : new Date();
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    const y = d.getFullYear();
+    const m = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const h = pad(d.getHours());
+    const min = pad(d.getMinutes());
+    return y + "-" + m + "-" + day + "T" + h + ":" + min;
   }
 
   /** Standard: 0 = Aktiv (links), 1 = Gesperrt/Abgeschaltet (rechts).
@@ -613,6 +630,21 @@ class RauchmelderCard extends HTMLElement {
             opacity: 0.9;
           }
 
+          .confirm-dialog .confirm-input {
+            margin: -10px 0 18px 0;
+          }
+
+          .confirm-dialog .confirm-input input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--divider-color, #3a3a3a);
+            border-radius: 10px;
+            font-size: 13px;
+            background: var(--input-fill-color, #2a2a2a);
+            color: var(--primary-text-color, #fff);
+            box-sizing: border-box;
+          }
+
           .confirm-dialog .confirm-actions {
             display: flex;
             justify-content: flex-end;
@@ -630,6 +662,21 @@ class RauchmelderCard extends HTMLElement {
           }
 
           .confirm-dialog .confirm-abbrechen:hover {
+            opacity: 0.9;
+          }
+
+          .confirm-dialog .confirm-now {
+            background: transparent;
+            color: var(--primary-color, #03a9f4);
+            border: 1px solid var(--primary-color, #03a9f4);
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+          }
+
+          .confirm-dialog .confirm-now:hover {
             opacity: 0.9;
           }
 
@@ -759,11 +806,15 @@ class RauchmelderCard extends HTMLElement {
         overlay.className = "confirm-overlay hidden";
         overlay.innerHTML = `
           <div class="confirm-dialog">
-            <div class="confirm-title">Bist du sicher?</div>
-            <div class="confirm-text">Batterie gewechselt?</div>
+            <div class="confirm-title">Batteriewechsel</div>
+            <div class="confirm-text">Datum/Uhrzeit eintragen oder "Jetzt" wählen.</div>
+            <div class="confirm-input">
+              <input type="datetime-local" id="battery-confirm-datetime" />
+            </div>
             <div class="confirm-actions">
               <button type="button" class="confirm-abbrechen" id="battery-confirm-abbrechen">Abbrechen</button>
-              <button type="button" class="confirm-ok" id="battery-confirm-ok">OK</button>
+              <button type="button" class="confirm-now" id="battery-confirm-now">Jetzt</button>
+              <button type="button" class="confirm-ok" id="battery-confirm-ok">Speichern</button>
             </div>
           </div>`;
         this.shadowRoot.appendChild(overlay);
@@ -791,6 +842,8 @@ class RauchmelderCard extends HTMLElement {
         ensureBatteryConfirmOverlay();
         const ov = this.shadowRoot.getElementById("battery-confirm-overlay");
         if (ov) ov.classList.remove("hidden");
+        const input = this.shadowRoot.getElementById("battery-confirm-datetime");
+        if (input) input.value = this._toDateTimeLocalValue(batteryChangedAt || new Date().toISOString());
       });
     }
 
