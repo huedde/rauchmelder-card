@@ -411,7 +411,9 @@ class RauchmelderCard extends HTMLElement {
     });
 
     const batteryEntityId = this._getBatteryEntityId();
-    const batteryStorageKey = batteryEntityId || ("title:" + (c.title || "Rauchmelder"));
+    // Pro Karte speichern (nicht global), damit nicht alle Karten dasselbe Datum teilen.
+    const cardKeyBase = c.entity_abschalten || c.title || "Rauchmelder";
+    const batteryStorageKey = "card:" + cardKeyBase + "|battery:" + (batteryEntityId || "none");
     const batteryChangedAt = this._getBatteryChangeDate(batteryStorageKey);
     const batteryChangedLabel = batteryChangedAt ? this._formatDateTime(batteryChangedAt) : "kein Datum";
 
