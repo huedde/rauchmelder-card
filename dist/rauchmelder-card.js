@@ -98,8 +98,8 @@ class RauchmelderCard extends HTMLElement {
         if (bov) bov.classList.add("hidden");
         if (key) {
           const input = this.shadowRoot.getElementById("battery-confirm-datetime");
-          const selectedLocal = (input && input.value) || this._batteryDraftDateTime || "";
-          const selected = selectedLocal ? new Date(selectedLocal).toISOString() : new Date().toISOString();
+          const selectedLocal = ((input && input.value) || this._batteryDraftDateTime || "").trim();
+          const selected = selectedLocal || this._toDateTimeLocalValue(new Date().toISOString());
           this._batteryDraftDateTime = "";
           this._setBatteryChangeDate(key, selected);
           this._render();
@@ -269,6 +269,10 @@ class RauchmelderCard extends HTMLElement {
 
   _formatDateTime(dateValue) {
     if (!dateValue) return "";
+    const localMatch = String(dateValue).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (localMatch) {
+      return localMatch[3] + "." + localMatch[2] + "." + localMatch[1] + ", " + localMatch[4] + ":" + localMatch[5];
+    }
     try {
       return new Date(dateValue).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
     } catch (_) {
