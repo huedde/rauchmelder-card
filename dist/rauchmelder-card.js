@@ -103,6 +103,13 @@ class RauchmelderCard extends HTMLElement {
           this._setBatteryChangeDate(key, selected);
           this._render();
         }
+      } else if (id === "battery-confirm-overlay") {
+        // Klick auf den dunklen Hintergrund schließt den Dialog.
+        this._batteryConfirmShown = false;
+        this._pendingBatteryStorageKey = "";
+        this._batteryDraftDateTime = "";
+        const bov = this.shadowRoot.getElementById("battery-confirm-overlay");
+        if (bov) bov.classList.add("hidden");
       }
     });
   }
@@ -163,6 +170,8 @@ class RauchmelderCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    // Verhindert, dass ein laufender Datumseintrag durch häufige HA-Updates überschrieben wird.
+    if (this._batteryConfirmShown) return;
     this._render();
   }
 
