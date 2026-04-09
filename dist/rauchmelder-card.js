@@ -63,6 +63,8 @@ class RauchmelderCard extends HTMLElement {
     this._config = {};
     this._hass = null;
     this._confirmShown = false;
+    this._batteryConfirmShown = false;
+    this._pendingBatteryStorageKey = "";
     this.shadowRoot.addEventListener("click", (e) => {
       const id = e.target.id;
       if (id === "confirm-abbrechen") {
@@ -75,6 +77,21 @@ class RauchmelderCard extends HTMLElement {
         if (ov) ov.classList.add("hidden");
         this._setAbschaltState(true);
         this._sendAbschaltEmail();
+      } else if (id === "battery-confirm-abbrechen") {
+        this._batteryConfirmShown = false;
+        this._pendingBatteryStorageKey = "";
+        const bov = this.shadowRoot.getElementById("battery-confirm-overlay");
+        if (bov) bov.classList.add("hidden");
+      } else if (id === "battery-confirm-ok") {
+        this._batteryConfirmShown = false;
+        const key = this._pendingBatteryStorageKey;
+        this._pendingBatteryStorageKey = "";
+        const bov = this.shadowRoot.getElementById("battery-confirm-overlay");
+        if (bov) bov.classList.add("hidden");
+        if (key) {
+          this._setBatteryChangeDate(key, new Date().toISOString());
+          this._render();
+        }
       }
     });
   }
@@ -734,6 +751,26 @@ class RauchmelderCard extends HTMLElement {
       overlay.classList.toggle("hidden", !this._confirmShown);
     };
 
+    const ensureBatteryConfirmOverlay = () => {
+      let overlay = this.shadowRoot.getElementById("battery-confirm-overlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "battery-confirm-overlay";
+        overlay.className = "confirm-overlay hidden";
+        overlay.innerHTML = `
+          <div class="confirm-dialog">
+            <div class="confirm-title">Bist du sicher?</div>
+            <div class="confirm-text">Batterie gewechselt?</div>
+            <div class="confirm-actions">
+              <button type="button" class="confirm-abbrechen" id="battery-confirm-abbrechen">Abbrechen</button>
+              <button type="button" class="confirm-ok" id="battery-confirm-ok">OK</button>
+            </div>
+          </div>`;
+        this.shadowRoot.appendChild(overlay);
+      }
+      overlay.classList.toggle("hidden", !this._batteryConfirmShown);
+    };
+
     if (btn && c.entity_abschalten) {
       btn.addEventListener("click", () => {
         if (abschaltenOn) {
@@ -749,14 +786,16 @@ class RauchmelderCard extends HTMLElement {
     const batteryDateBtn = this.shadowRoot.querySelector("[data-battery-date-btn='1']");
     if (batteryDateBtn && c.battery_date_enabled) {
       batteryDateBtn.addEventListener("click", () => {
-        const ok = window.confirm("Batterie gewechselt?");
-        if (!ok) return;
-        this._setBatteryChangeDate(batteryStorageKey, new Date().toISOString());
-        this._render();
+        this._pendingBatteryStorageKey = batteryStorageKey;
+        this._batteryConfirmShown = true;
+        ensureBatteryConfirmOverlay();
+        const ov = this.shadowRoot.getElementById("battery-confirm-overlay");
+        if (ov) ov.classList.remove("hidden");
       });
     }
 
     ensureConfirmOverlay();
+    ensureBatteryConfirmOverlay();
   }
 
   _hexToRgba(hex, alpha) {
