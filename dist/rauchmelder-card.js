@@ -8,6 +8,7 @@
 const CARD_VERSION = "2.0.0";
 
 const LAST_STATE_KEY = "rauchmelder_card_last_state";
+const BATTERY_CHANGE_KEY = "rauchmelder_card_battery_change_dates";
 
 console.info(
   `%c RAUCHMELDER-CARD %c v${CARD_VERSION} `,
@@ -95,6 +96,7 @@ class RauchmelderCard extends HTMLElement {
       switch_color_off: "#555555",
       email_enabled: false,
       email_service: "",
+      battery_date_enabled: true,
       invert_abschalt_output: false,
       entities: [defaultEntity(0), defaultEntity(1), defaultEntity(2)],
     };
@@ -113,6 +115,7 @@ class RauchmelderCard extends HTMLElement {
       switch_color_off: config.switch_color_off || "#555555",
       email_enabled: !!config.email_enabled,
       email_service: config.email_service || "",
+      battery_date_enabled: config.battery_date_enabled !== false,
       invert_abschalt_output: !!config.invert_abschalt_output,
       entities: Array.isArray(config.entities) && config.entities.length >= 3
         ? config.entities.map((e, i) => ({
@@ -183,6 +186,52 @@ class RauchmelderCard extends HTMLElement {
 
   _isActiveFromState(stateValue) {
     return stateValue === "on" || stateValue === "locked";
+  }
+
+  _isBatteryEntity(entityCfg) {
+    if (!entityCfg) return false;
+    const icon = String(entityCfg.icon || "").toLowerCase();
+    const name = String(entityCfg.name || "").toLowerCase();
+    return icon.includes("battery") || name.includes("batterie");
+  }
+
+  _getBatteryEntityId() {
+    const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
+    const row = entities.find((e) => this._isBatteryEntity(e));
+    return row && row.entity ? row.entity : "";
+  }
+
+  _getBatteryStore() {
+    try {
+      const raw = localStorage.getItem(BATTERY_CHANGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  _setBatteryChangeDate(storageKey, isoDateString) {
+    if (!storageKey || !isoDateString) return;
+    try {
+      const o = this._getBatteryStore();
+      o[storageKey] = isoDateString;
+      localStorage.setItem(BATTERY_CHANGE_KEY, JSON.stringify(o));
+    } catch (_) {}
+  }
+
+  _getBatteryChangeDate(storageKey) {
+    if (!storageKey) return "";
+    const o = this._getBatteryStore();
+    return o[storageKey] || "";
+  }
+
+  _formatDateTime(dateValue) {
+    if (!dateValue) return "";
+    try {
+      return new Date(dateValue).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
+    } catch (_) {
+      return "";
+    }
   }
 
   /** Standard: 0 = Aktiv (links), 1 = Gesperrt/Abgeschaltet (rechts).
@@ -278,8 +327,14 @@ class RauchmelderCard extends HTMLElement {
         hasEntity: !!entityId,
         display_left: e.display_left || "bezeichnung",
         icon: e.icon || "mdi:circle",
+        isBatteryRow: this._isBatteryEntity(e),
       };
     });
+
+    const batteryEntityId = this._getBatteryEntityId();
+    const batteryStorageKey = batteryEntityId || ("title:" + (c.title || "Rauchmelder"));
+    const batteryChangedAt = this._getBatteryChangeDate(batteryStorageKey);
+    const batteryChangedLabel = batteryChangedAt ? this._formatDateTime(batteryChangedAt) : "kein Datum";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
@@ -426,8 +481,33 @@ class RauchmelderCard extends HTMLElement {
             flex-shrink: 0;
           }
 
+          .text-row .row-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+          }
+
           .text-row .row-icon ha-icon {
             --mdc-icon-size: 18px;
+          }
+
+          .battery-date-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary, #aaa);
+            font-size: 10px;
+            line-height: 1.1;
+            cursor: pointer;
+            padding: 0;
+            text-align: left;
+            white-space: nowrap;
+            opacity: 0.92;
+          }
+
+          .battery-date-btn:hover {
+            opacity: 1;
+            text-decoration: underline;
           }
 
           .abschalt-datetime {
@@ -579,6 +659,10 @@ class RauchmelderCard extends HTMLElement {
               white-space: normal;
             }
 
+            .text-row .row-left {
+              flex-wrap: wrap;
+            }
+
             .text-row .value {
               text-align: left;
               max-width: 100%;
@@ -608,7 +692,12 @@ class RauchmelderCard extends HTMLElement {
           <div class="right">
             ${rows.map((r) => `
               <div class="text-row">
-                ${r.display_left === "icon" ? `<span class="row-icon" style="color:${r.color}"><ha-icon icon="${r.icon}"></ha-icon></span>` : `<span class="label">${r.name}</span>`}
+                ${r.display_left === "icon"
+                  ? `<span class="row-left">
+                      <span class="row-icon" style="color:${r.color}"><ha-icon icon="${r.icon}"></ha-icon></span>
+                      ${c.battery_date_enabled && r.isBatteryRow ? `<button type="button" class="battery-date-btn" data-battery-date-btn="1" title="Klicken zum Setzen auf aktuelles Datum">${batteryChangedLabel}</button>` : ``}
+                    </span>`
+                  : `<span class="label">${r.name}</span>`}
                 <span class="value" style="color:${r.color}">${r.value}</span>
               </div>
             `).join("")}
@@ -657,6 +746,16 @@ class RauchmelderCard extends HTMLElement {
       });
     }
 
+    const batteryDateBtn = this.shadowRoot.querySelector("[data-battery-date-btn='1']");
+    if (batteryDateBtn && c.battery_date_enabled) {
+      batteryDateBtn.addEventListener("click", () => {
+        const ok = window.confirm("Batterie gewechselt?");
+        if (!ok) return;
+        this._setBatteryChangeDate(batteryStorageKey, new Date().toISOString());
+        this._render();
+      });
+    }
+
     ensureConfirmOverlay();
   }
 
@@ -680,6 +779,9 @@ class RauchmelderCardEditor extends HTMLElement {
 
   setConfig(config) {
     this._config = JSON.parse(JSON.stringify(config));
+    if (typeof this._config.battery_date_enabled !== "boolean") {
+      this._config.battery_date_enabled = true;
+    }
     if (!this._config.entities || !Array.isArray(this._config.entities) || this._config.entities.length < 3) {
       this._config.entities = [defaultEntity(0), defaultEntity(1), defaultEntity(2)];
     }
@@ -967,6 +1069,17 @@ class RauchmelderCardEditor extends HTMLElement {
             <input type="text" id="email_service" value="${c.email_service || ""}" placeholder="notify.mail_open_door" list="notify_services" />
           </div>
         </div>
+
+        <div class="section">
+          <div class="section-title">Batterie-Datum</div>
+          <div class="field" style="flex-direction: row; align-items: center; gap: 10px;">
+            <input type="checkbox" id="battery_date_enabled" ${c.battery_date_enabled ? "checked" : ""} />
+            <span class="field-label" style="margin: 0;">Datum neben Batterie-Icon anzeigen (klickbar)</span>
+          </div>
+          <div class="field">
+            <span class="field-hint">Beim Klick auf das Datum wird gefragt, ob die Batterie gewechselt wurde. Bei OK wird das aktuelle Datum gespeichert.</span>
+          </div>
+        </div>
       </div>
     `;
 
@@ -1026,6 +1139,14 @@ class RauchmelderCardEditor extends HTMLElement {
       });
     }
     bind("email_service", "email_service");
+
+    const batteryDateEnabledEl = this.shadowRoot.getElementById("battery_date_enabled");
+    if (batteryDateEnabledEl) {
+      batteryDateEnabledEl.addEventListener("change", () => {
+        this._config.battery_date_enabled = batteryDateEnabledEl.checked;
+        this._fire();
+      });
+    }
 
     const switchColorOnPicker = this.shadowRoot.getElementById("switch_color_on_picker");
     const switchColorOnText = this.shadowRoot.getElementById("switch_color_on");
