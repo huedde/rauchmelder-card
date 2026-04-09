@@ -65,6 +65,7 @@ class RauchmelderCard extends HTMLElement {
     this._confirmShown = false;
     this._batteryConfirmShown = false;
     this._pendingBatteryStorageKey = "";
+    this._batteryDraftDateTime = "";
     this.shadowRoot.addEventListener("click", (e) => {
       const id = e.target.id;
       if (id === "confirm-abbrechen") {
@@ -80,11 +81,14 @@ class RauchmelderCard extends HTMLElement {
       } else if (id === "battery-confirm-abbrechen") {
         this._batteryConfirmShown = false;
         this._pendingBatteryStorageKey = "";
+        this._batteryDraftDateTime = "";
         const bov = this.shadowRoot.getElementById("battery-confirm-overlay");
         if (bov) bov.classList.add("hidden");
       } else if (id === "battery-confirm-now") {
         const input = this.shadowRoot.getElementById("battery-confirm-datetime");
-        if (input) input.value = this._toDateTimeLocalValue(new Date().toISOString());
+        const nowValue = this._toDateTimeLocalValue(new Date().toISOString());
+        this._batteryDraftDateTime = nowValue;
+        if (input) input.value = nowValue;
       } else if (id === "battery-confirm-ok") {
         this._batteryConfirmShown = false;
         const key = this._pendingBatteryStorageKey;
@@ -93,7 +97,9 @@ class RauchmelderCard extends HTMLElement {
         if (bov) bov.classList.add("hidden");
         if (key) {
           const input = this.shadowRoot.getElementById("battery-confirm-datetime");
-          const selected = input && input.value ? new Date(input.value).toISOString() : new Date().toISOString();
+          const selectedLocal = (input && input.value) || this._batteryDraftDateTime || "";
+          const selected = selectedLocal ? new Date(selectedLocal).toISOString() : new Date().toISOString();
+          this._batteryDraftDateTime = "";
           this._setBatteryChangeDate(key, selected);
           this._render();
         }
@@ -843,12 +849,30 @@ class RauchmelderCard extends HTMLElement {
         const ov = this.shadowRoot.getElementById("battery-confirm-overlay");
         if (ov) ov.classList.remove("hidden");
         const input = this.shadowRoot.getElementById("battery-confirm-datetime");
-        if (input) input.value = this._toDateTimeLocalValue(batteryChangedAt || new Date().toISOString());
+        if (!this._batteryDraftDateTime) {
+          this._batteryDraftDateTime = this._toDateTimeLocalValue(batteryChangedAt || new Date().toISOString());
+        }
+        if (input) input.value = this._batteryDraftDateTime;
       });
     }
 
     ensureConfirmOverlay();
     ensureBatteryConfirmOverlay();
+    const batteryDateInput = this.shadowRoot.getElementById("battery-confirm-datetime");
+    if (batteryDateInput) {
+      if (this._batteryConfirmShown) {
+        if (!this._batteryDraftDateTime) {
+          this._batteryDraftDateTime = this._toDateTimeLocalValue(batteryChangedAt || new Date().toISOString());
+        }
+        batteryDateInput.value = this._batteryDraftDateTime;
+      }
+      batteryDateInput.addEventListener("input", (e) => {
+        this._batteryDraftDateTime = e.target.value || "";
+      });
+      batteryDateInput.addEventListener("change", (e) => {
+        this._batteryDraftDateTime = e.target.value || "";
+      });
+    }
   }
 
   _hexToRgba(hex, alpha) {
